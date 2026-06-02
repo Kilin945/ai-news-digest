@@ -93,3 +93,7 @@ security delete-generic-password -s "ai-news-gmail"
 - [Claude Code](https://claude.com/claude-code) CLI（已登入）
 - Python 3
 - 一個啟用兩步驟驗證、可建立 App Password 的 Gmail 帳號
+
+## 授權
+
+[MIT](LICENSE) © 2026 Kilin Yeh
