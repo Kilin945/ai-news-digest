@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "PingFang TC", "Helvetica Neue", Arial, sans-serif;
+    background: #e9edf3;
+    padding: 28px;
+    width: 760px;
+  }
+  .window {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(20,40,80,.18);
+  }
+  /* 仿 Gmail 信件頭 */
+  .mailbar { background:#f6f8fc; padding:14px 22px; border-bottom:1px solid #e3e8f0; }
+  .subject { font-size:18px; font-weight:700; color:#202124; }
+  .meta { font-size:12.5px; color:#5f6368; margin-top:4px; }
+  .meta b { color:#202124; }
+  .body { padding: 22px 26px 26px; }
+  .title-h {
+    font-size: 20px; font-weight: 800; color:#1a2b4a;
+    border-left: 5px solid #3b6cf6; padding-left: 12px; margin-bottom: 18px;
+  }
+  .item { padding: 14px 0; border-bottom: 1px solid #eef1f6; }
+  .item:last-child { border-bottom: none; }
+  .num { color:#3b6cf6; font-weight:800; }
+  .zh-t { font-size: 15.5px; font-weight: 700; color:#16213e; }
+  .en-t { font-size: 13px; color:#5b6470; font-style: italic; margin: 2px 0 6px; }
+  .src { font-size: 12px; }
+  .src a { color:#3b6cf6; text-decoration: none; }
+  .zh-s { font-size: 13.5px; color:#33394a; margin-top: 6px; line-height: 1.55; }
+  .en-s { font-size: 12.5px; color:#7a818e; margin-top: 3px; line-height: 1.5; }
+  .badge {
+    display:inline-block; background:#eef3ff; color:#3b6cf6;
+    font-size:11px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:6px;
+  }
+  .foot { text-align:center; font-size:11.5px; color:#9aa1ad; padding-top:14px; }
+</style>
+</head>
+<body>
+  <div class="window">
+    <div class="mailbar">
+      <div class="subject">每日 AI 新聞 Top 10 — 2026-06-02</div>
+      <div class="meta"><b>每日 AI 新聞</b> &lt;you@example.com&gt; · 上午 8:04 · 收件匣</div>
+    </div>
+    <div class="body">
+      <div class="title-h">📰 每日 AI 新聞 Top 10 · 2026-06-02</div>
+
+      <div class="item">
+        <div class="zh-t"><span class="num">1.</span> Anthropic 機密提交 IPO，估值近兆美元 <span class="badge">產業</span></div>
+        <div class="en-t">Anthropic Files Confidentially for IPO at Near-Trillion Valuation</div>
+        <div class="src">來源：<a href="#">CNBC</a></div>
+        <div class="zh-s">Anthropic 已向 SEC 機密提交首次公開募股文件，市場估值逼近一兆美元，可能成為今年最大科技 IPO 之一。</div>
+        <div class="en-s">Anthropic has confidentially filed for an IPO, with a valuation approaching one trillion dollars.</div>
+      </div>
+
+      <div class="item">
+        <div class="zh-t"><span class="num">2.</span> 微軟 Build 2026 開幕：自主 AI 代理人成主軸 <span class="badge">產品</span></div>
+        <div class="en-t">Microsoft Build 2026 Kicks Off: Autonomous AI Agents Take Center Stage</div>
+        <div class="src">來源：<a href="#">Tom's Guide</a></div>
+        <div class="zh-s">微軟年度開發者大會聚焦可自主執行多步驟任務的 AI 代理人，並深化 Copilot 與企業工作流的整合。</div>
+        <div class="en-s">Microsoft's developer conference centered on autonomous agents able to carry out multi-step tasks.</div>
+      </div>
+
+      <div class="item">
+        <div class="zh-t"><span class="num">3.</span> Google I/O：Gemini 月活突破 9 億 <span class="badge">大模型</span></div>
+        <div class="en-t">Google I/O: Gemini Surpasses 900M Monthly Active Users</div>
+        <div class="src">來源：<a href="#">StartupHub.ai</a></div>
+        <div class="zh-s">Google 宣布 Gemini 月活躍使用者突破 9 億，並推出更快、成本更低的新版本正式上線。</div>
+        <div class="en-s">Google announced Gemini crossed 900M MAU and shipped a faster, cheaper model into general availability.</div>
+      </div>
+
+      <div class="item">
+        <div class="zh-t"><span class="num">4.</span> 蘋果 WWDC 2026：新版 Siri 將搭載第三方大模型 <span class="badge">產品</span></div>
+        <div class="en-t">Apple WWDC 2026: Revamped Siri to Run on Third-Party LLM</div>
+        <div class="src">來源：<a href="#">Yahoo Tech</a></div>
+        <div class="zh-s">蘋果預告全面重寫的 Siri，將整合第三方大型語言模型以大幅提升理解與生成能力。</div>
+        <div class="en-s">Apple previewed a rebuilt Siri integrating a third-party large language model.</div>
+      </div>
+
+      <div class="item">
+        <div class="zh-t"><span class="num">5.</span> 史上首起純 LLM 代理人網路攻擊遭記錄 <span class="badge">資安</span></div>
+        <div class="en-t">First Documented Cyberattack Driven Entirely by an LLM Agent</div>
+        <div class="src">來源：<a href="#">LLM-Stats</a></div>
+        <div class="zh-s">研究人員記錄到首起幾乎全程由 LLM 代理人自主執行的網路攻擊，引發對 AI 濫用的新一波警戒。</div>
+        <div class="en-s">Researchers documented the first cyberattack carried out almost entirely by an autonomous LLM agent.</div>
+      </div>
+
+      <div class="foot">… 還有 5 則 · 由 AI News Digest 自動產生並寄送</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,6 +4,12 @@
 
 由 **macOS launchd** 排程 → 觸發 **headless Claude Code**（`claude -p`）搜尋並翻譯新聞 → 透過 **Gmail SMTP** 寄信。Gmail App Password 存放在 **macOS Keychain**，個人設定放在 gitignore 的 `config.env`，repo 不含任何明文密碼或私人信箱。
 
+<p align="center">
+  <img src="docs/preview.png" alt="每日 AI 新聞信件示意圖" width="520">
+  <br>
+  <em>每天早上收到的信件示意（內容為範例）</em>
+</p>
+
 ---
 
 ## 架構
