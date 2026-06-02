@@ -1,0 +1,12 @@
+# 個人設定（含真實信箱/路徑），只 commit config.env.example
+config.env
+
+# 執行紀錄
+*.log
+run.log
+
+# 任何可能誤放的機密（密碼一律存 macOS Keychain，不進 repo）
+*.env
+!config.env.example
+secrets*
+*app-password*
