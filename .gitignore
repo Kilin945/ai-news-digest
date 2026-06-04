@@ -5,6 +5,9 @@ config.env
 *.log
 run.log
 
+# 每週期「已寄」記號（執行期狀態，不進版控）
+state/
+
 # 任何可能誤放的機密（密碼一律存 macOS Keychain，不進 repo）
 *.env
 !config.env.example

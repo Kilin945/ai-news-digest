@@ -8,15 +8,20 @@
     <key>ProgramArguments</key>
     <array>
         <string>__PROJECT_DIR__/run_ai_news.sh</string>
+        <string>prompt.txt</string>
+        <string>每日 AI 新聞 Top 10</string>
+        <string>daily</string>
     </array>
 
+    <!-- 多個時段：第一個在 FullWake+有網路 時成功的就寄，其餘靠 marker 秒跳過 -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>8</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <array>
+        <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>0</integer></dict>
+    </array>
 
     <key>StandardOutPath</key>
     <string>__PROJECT_DIR__/launchd.out.log</string>

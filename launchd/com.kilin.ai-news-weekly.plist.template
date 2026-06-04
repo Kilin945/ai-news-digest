@@ -10,17 +10,16 @@
         <string>__PROJECT_DIR__/run_ai_news.sh</string>
         <string>prompt_weekly.txt</string>
         <string>每週 AI 新聞回顧</string>
+        <string>weekly</string>
     </array>
 
+    <!-- 每週日多個補跑時段 -->
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Weekday</key>
-        <integer>0</integer>
-        <key>Hour</key>
-        <integer>8</integer>
-        <key>Minute</key>
-        <integer>10</integer>
-    </dict>
+    <array>
+        <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>10</integer></dict>
+        <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>10</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
+    </array>
 
     <key>StandardOutPath</key>
     <string>__PROJECT_DIR__/launchd.out.log</string>
