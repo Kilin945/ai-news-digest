@@ -40,6 +40,11 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"; }
 
+# 桌面通知（僅用於「不會自己好」的錯誤，例如寄信憑證失效）
+notify() {  # $1=標題 $2=內文
+  /usr/bin/osascript -e "display notification \"$2\" with title \"$1\" sound name \"Basso\"" >/dev/null 2>&1
+}
+
 # 依 kind 算出本週期的識別字串
 period_key() {
   case "$KIND" in
@@ -126,11 +131,18 @@ if [ -z "$HTML" ]; then
 fi
 
 # 成功：寄出新聞並打上「本週期已寄」記號
-echo "$HTML" | "$PYTHON" "$DIR/send_ai_news.py" "$SUBJECT_PREFIX" >> "$LOG" 2>&1
+SEND_OUT="$(echo "$HTML" | "$PYTHON" "$DIR/send_ai_news.py" "$SUBJECT_PREFIX" 2>&1)"
 RC=$?
+echo "$SEND_OUT" >> "$LOG"
 if [ $RC -eq 0 ]; then
   date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
   log "INFO: 已寄出並標記 $(basename "$MARKER")。"
+else
+  # 寄信失敗（多半是 Gmail App Password 失效，重試也不會好）→ 主動通知
+  REASON="$(echo "$SEND_OUT" | grep -iE 'error' | tail -1 | tr -d '"\\' | cut -c1-180)"
+  [ -z "$REASON" ] && REASON="請查看 run.log"
+  notify "⚠️ AI 新聞寄送失敗" "$SUBJECT_PREFIX：$REASON"
+  log "NOTIFY: 寄送失敗，已發桌面通知。原因：$REASON"
 fi
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=$RC) [$SUBJECT_PREFIX] =====" >> "$LOG"
