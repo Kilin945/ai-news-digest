@@ -26,6 +26,18 @@ PYTHON_BIN="$(detect_bin python3 /opt/homebrew/bin/python3 /usr/local/bin/python
 say "claude  -> ${CLAUDE_BIN:-未偵測到}"
 say "python3 -> ${PYTHON_BIN:-未偵測到}"
 
+# ── 1b. 安裝 Python 依賴（feedparser）──
+if [ -n "$PYTHON_BIN" ]; then
+  if "$PYTHON_BIN" -c "import feedparser" >/dev/null 2>&1; then
+    ok "feedparser 已安裝"
+  else
+    say "安裝 feedparser…"
+    "$PYTHON_BIN" -m pip install --user --break-system-packages feedparser \
+      && ok "feedparser 安裝完成" \
+      || warn "feedparser 安裝失敗，請手動執行：$PYTHON_BIN -m pip install --user --break-system-packages feedparser"
+  fi
+fi
+
 # ── 2. 建立 config.env（若不存在）並填入偵測到的路徑 ──
 if [ ! -f "$PROJECT_DIR/config.env" ]; then
   cp "$PROJECT_DIR/config.env.example" "$PROJECT_DIR/config.env"

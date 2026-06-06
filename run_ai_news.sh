@@ -31,6 +31,15 @@ PROMPT_FILE="${1:-prompt.txt}"
 SUBJECT_PREFIX="${2:-每日 AI 新聞 Top 10}"
 KIND="${3:-daily}"
 
+# ── RSS 來源與已寄狀態 ──
+FEEDS_FILE="$DIR/feeds.txt"
+SEEN_FILE="$STATE_DIR/seen_urls.json"
+case "$KIND" in
+  weekly)  FEED_HOURS=168;  FEED_WIDEN=240 ;;   # 7 天 → 放寬 10 天
+  monthly) FEED_HOURS=720;  FEED_WIDEN=1080 ;;  # 30 天 → 放寬 45 天
+  *)       FEED_HOURS=48;   FEED_WIDEN=72 ;;     # 每日 48h → 放寬 72h
+esac
+
 # ── 可調參數 ──
 MAX_TRIES=3            # claude 失敗最多重試次數
 CLAUDE_TIMEOUT=600     # 單次 claude 最長秒數
@@ -81,7 +90,6 @@ run_claude() {
   : > "$outfile"
   "$CLAUDE" -p "$PROMPT" \
     --model "$MODEL" \
-    --allowedTools WebSearch WebFetch \
     --permission-mode default \
     --output-format text > "$outfile" 2>>"$LOG" &
   local cpid=$!
@@ -104,13 +112,24 @@ looks_valid() {
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') 開始 [$SUBJECT_PREFIX] (kind=$KIND) =====" >> "$LOG"
 
-PROMPT="$(cat "$DIR/$PROMPT_FILE")"
+BASE_PROMPT="$(cat "$DIR/$PROMPT_FILE")"
 TMP_OUT="$(mktemp -t ai-news)"
 
 HTML=""
 attempt=1
 while [ $attempt -le $MAX_TRIES ]; do
   if ! wait_for_network; then break; fi    # 網路沒就緒就不浪費 claude 額度，留待補跑
+
+  if ! CANDIDATES="$("$PYTHON" "$DIR/fetch_feeds.py" collect \
+      --feeds "$FEEDS_FILE" --seen "$SEEN_FILE" \
+      --hours "$FEED_HOURS" --widen "$FEED_WIDEN" --min 10 2>>"$LOG")" \
+     || [ -z "$CANDIDATES" ]; then
+    log "WARN: 第 $attempt/$MAX_TRIES 次抓 RSS 候選失敗或為空，30s 後重試。"
+    attempt=$((attempt+1)); [ $attempt -le $MAX_TRIES ] && sleep 30
+    continue
+  fi
+  PROMPT="$BASE_PROMPT"$'\n\n=== 候選新聞清單（只能從這裡面挑）===\n'"$CANDIDATES"
+
   run_claude "$TMP_OUT"; crc=$?
   OUT="$(cat "$TMP_OUT")"
   if [ $crc -eq 0 ] && looks_valid "$OUT"; then
@@ -136,6 +155,13 @@ RC=$?
 echo "$SEND_OUT" >> "$LOG"
 if [ $RC -eq 0 ]; then
   date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
+  # 把這次信中實際出現的文章連結記入已寄清單，供跨日去重
+  if ! print -r -- "$HTML" \
+    | grep -oE "href=['\"]https?://[^'\"]+['\"]" \
+    | sed -E "s/^href=['\"]//; s/['\"]$//" \
+    | "$PYTHON" "$DIR/fetch_feeds.py" record --seen "$SEEN_FILE" 2>>"$LOG"; then
+    log "WARN: 已寄 URL 記錄失敗（不影響本次寄送，下次可能出現重複新聞）。"
+  fi
   log "INFO: 已寄出並標記 $(basename "$MARKER")。"
 else
   # 寄信失敗（多半是 Gmail App Password 失效，重試也不會好）→ 主動通知

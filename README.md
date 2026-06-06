@@ -2,7 +2,9 @@
 
 每天、每週、每月自動把最新 AI 新聞（英文原文 + 繁體中文翻譯）寄到你的 Gmail 收件匣。
 
-由 **macOS launchd** 排程 → 觸發 **headless Claude Code**（`claude -p`）搜尋並翻譯新聞 → 透過 **Gmail SMTP** 寄信。Gmail App Password 存放在 **macOS Keychain**，個人設定放在 gitignore 的 `config.env`，repo 不含任何明文密碼或私人信箱。
+由 **macOS launchd** 排程 → 從多家可信媒體的 **RSS** 抓最新新聞 → 觸發 **headless Claude Code**（`claude -p`）從候選清單挑重點並翻譯 → 透過 **Gmail SMTP** 寄信。Gmail App Password 存放在 **macOS Keychain**，個人設定放在 gitignore 的 `config.env`，repo 不含任何明文密碼或私人信箱。
+
+> 新聞來源是一份你可自行增減的 RSS 清單（`feeds.txt`），並會記住近 7 天寄過的連結避免重複，而不是讓 Claude 自由上網搜尋。
 
 <p align="center">
   <img src="docs/preview.png" alt="每日 AI 新聞信件示意圖" width="520">
@@ -22,8 +24,9 @@
 每月1日 08:20 / 11:00 / 15:00                   ┘
                   │
                   ├─ 已寄過？→ 秒跳過（marker 去重，exactly-once）
-                  ├─ 等網路就緒 → claude -p（只用 WebSearch/WebFetch）→ HTML
-                  └─ send_ai_news.py → Gmail SMTP 寄進收件匣 → 打 marker
+                  ├─ 等網路就緒 → fetch_feeds.py 抓各家 RSS、濾近 48h、排除近 7 天寄過的
+                  ├─ 候選清單交給 claude -p（不上網，只挑重點＋翻譯）→ HTML
+                  └─ send_ai_news.py → Gmail SMTP 寄進收件匣 → 打 marker、記錄已寄連結
 ```
 
 ### 可靠性設計
@@ -44,7 +47,10 @@
 | 檔案 | 作用 |
 |------|------|
 | `install.sh` | 安裝器：偵測路徑、產生並安裝 launchd 排程、設定喚醒 |
-| `run_ai_news.sh` | 主腳本，串接 Claude → 寄信；自動偵測所在目錄、讀 config.env |
+| `run_ai_news.sh` | 主腳本，串接 抓 RSS → Claude → 寄信；自動偵測所在目錄、讀 config.env |
+| `fetch_feeds.py` | 抓各家 RSS、濾時間窗、排除近 7 天寄過的連結，輸出候選清單；另有記錄已寄連結的模式 |
+| `feeds.txt` | 新聞來源清單（一行一個 RSS），自行增減即可，不用改程式 |
+| `requirements.txt` | Python 依賴（`feedparser`）|
 | `send_ai_news.py` | SMTP 寄信，設定讀 config.env、密碼讀 Keychain |
 | `config.env.example` | 個人設定範本（**進版控**）|
 | `config.env` | 你的實際設定（**被 .gitignore**）|
@@ -77,7 +83,8 @@ tail -30 run.log                                       # 看執行紀錄
 
 ## 自訂
 
-- **改新聞主題 / 則數 / 排版** → 編輯對應的 `prompt*.txt`
+- **加 / 減新聞來源** → 編輯 `feeds.txt`（一行一個 `RSS網址 <tab或|> 顯示名稱`，`#` 為註解）
+- **改挑選規則 / 則數 / 排版** → 編輯對應的 `prompt*.txt`
 - **改寄送時間** → 編輯 `launchd/*.plist.template` 的 `Hour`/`Minute`，重跑 `./install.sh`；並同步調整 `pmset` 喚醒時間
 - **改寄件信箱 / 路徑 / 模型** → 編輯 `config.env`
 - **換密碼** → 用 `security add-generic-password -U ...` 更新 Keychain 項目
@@ -109,7 +116,7 @@ security delete-generic-password -s "ai-news-gmail"
 
 - macOS（launchd / pmset / Keychain）
 - [Claude Code](https://claude.com/claude-code) CLI（已登入）
-- Python 3
+- Python 3 + `feedparser`（`install.sh` 會自動安裝；或手動 `pip install -r requirements.txt`）
 - 一個啟用兩步驟驗證、可建立 App Password 的 Gmail 帳號
 
 ## 授權

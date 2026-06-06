@@ -5,6 +5,10 @@ config.env
 *.log
 run.log
 
+# Python 快取
+__pycache__/
+*.pyc
+
 # 每週期「已寄」記號（執行期狀態，不進版控）
 state/
 

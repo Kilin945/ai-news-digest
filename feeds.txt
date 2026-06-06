@@ -1,0 +1,21 @@
+# AI News Digest 來源清單（一行一個）：<URL> <tab 或 |> 顯示名稱；# 為註解。
+# 增減來源直接改這個檔，不用動程式。
+
+# ── 主流科技新聞 ──
+https://techcrunch.com/category/artificial-intelligence/feed/	TechCrunch
+https://www.theverge.com/rss/ai-artificial-intelligence/index.xml	The Verge
+https://venturebeat.com/category/ai/feed/	VentureBeat
+
+# ── 深度科技媒體 ──
+https://feeds.arstechnica.com/arstechnica/index	Ars Technica
+https://www.wired.com/feed/tag/ai/latest/rss	Wired
+https://www.technologyreview.com/feed/	MIT Technology Review
+
+# ── 官方源頭 ──
+https://openai.com/news/rss.xml	OpenAI
+# DEAD: https://www.anthropic.com/rss.xml	Anthropic
+https://deepmind.google/blog/rss.xml	Google DeepMind
+
+# ── 中文 / 亞洲 AI 源 ──
+# DEAD: https://www.jiqizhixin.com/rss	機器之心
+https://www.ithome.com.tw/rss	iThome
