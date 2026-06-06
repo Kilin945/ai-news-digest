@@ -9,6 +9,10 @@ run.log
 __pycache__/
 *.pyc
 
+# IDE
+.idea/
+.vscode/
+
 # 每週期「已寄」記號（執行期狀態，不進版控）
 state/
 
