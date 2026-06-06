@@ -22,22 +22,6 @@
   .meta { font-size:12.5px; color:#5f6368; margin-top:4px; }
   .meta b { color:#202124; }
   .body { padding: 22px 26px 26px; }
-  .title-h {
-    font-size: 20px; font-weight: 800; color:#1a2b4a;
-    border-left: 5px solid #3b6cf6; padding-left: 12px; margin-bottom: 18px;
-  }
-  .item { padding: 15px 0; border-bottom: 1px solid #eef1f6; }
-  .item:last-child { border-bottom: none; }
-  .num { color:#3b6cf6; font-weight:800; }
-  /* 英文主、中文副 */
-  .en-t { font-size: 15.5px; font-weight: 800; color:#16213e; line-height: 1.4; }
-  .zh-t { font-size: 13px; color:#5b6470; margin: 3px 0 7px; }
-  .en-s { font-size: 12.5px; color:#555c68; line-height: 1.55; }
-  .zh-s { font-size: 12.5px; color:#8a909c; margin-top: 4px; line-height: 1.55; }
-  .src { font-size: 12px; margin-top: 8px; }
-  .src a { color:#3b6cf6; text-decoration: none; }
-  .src b { color:#3b424f; font-weight:700; }
-  .foot { text-align:center; font-size:11.5px; color:#9aa1ad; padding-top:14px; }
 </style>
 </head>
 <body>
@@ -47,49 +31,57 @@
       <div class="meta"><b>每日 AI 新聞</b> &lt;you@example.com&gt; · 上午 8:18 · 收件匣</div>
     </div>
     <div class="body">
-      <div class="title-h">📰 每日 AI 新聞 Top 10 · 2026-06-06</div>
 
-      <div class="item">
-        <div class="en-t"><span class="num">1.</span> Anthropic Reports Over 80% of Production Code Now Written by Claude</div>
-        <div class="zh-t">Anthropic 宣稱逾八成正式程式碼由 Claude 撰寫，倡議建立 AI 協調暫停機制</div>
-        <div class="en-s">Anthropic revealed that over 80% of code merged into its production codebase is now written by Claude, and called for verifiable global mechanisms to collectively slow or pause AI development if needed.</div>
-        <div class="zh-s">Anthropic 揭露程式碼庫逾八成合併程式碼由 Claude 生成，同時呼籲建立可驗證的全球協調機制，必要時能共同減速或暫停開發。</div>
-        <div class="src"><b>iThome</b> · <a href="#">原文連結</a></div>
-      </div>
+<!-- ↓↓↓ 與 prompt.txt 產出的實際信件相同的版型 ↓↓↓ -->
+<div style="font-family:-apple-system,'PingFang TC','Helvetica Neue',Arial,sans-serif;max-width:680px;margin:0 auto;color:#16213e;">
 
-      <div class="item">
-        <div class="en-t"><span class="num">2.</span> Google Will Pay SpaceX $920 Million Per Month for Compute</div>
-        <div class="zh-t">Google 每月支付 SpaceX 9.2 億美元租用運算資源</div>
-        <div class="en-s">Google struck a deal to pay SpaceX $920 million per month for computing resources, driven by AI product demand that far exceeded internal projections — underscoring the unprecedented scale of AI infrastructure spending.</div>
-        <div class="zh-s">Google 因 AI 產品需求遠超預期，與 SpaceX 簽下每月 9.2 億美元的運算資源租用協議，成為迄今規模最大的基礎設施交易之一。</div>
-        <div class="src"><b>TechCrunch</b> · <a href="#">原文連結</a></div>
-      </div>
+<div style="font-size:20px;font-weight:800;color:#1a2b4a;border-left:5px solid #3b6cf6;padding-left:12px;margin:0 0 18px;">📰 每日 AI 新聞 Top 10 · 2026-06-06</div>
 
-      <div class="item">
-        <div class="en-t"><span class="num">3.</span> Meta's AI Customer Support Agent Exploited to Steal Instagram Accounts at Scale</div>
-        <div class="zh-t">Meta AI 客服代理遭駭客利用，大規模竊取 Instagram 帳號</div>
-        <div class="en-s">Attackers exploited Meta's AI support agent simply by asking it to link target accounts to attacker-controlled emails — showing AI agent security extends far beyond jailbreak defenses.</div>
-        <div class="zh-s">攻擊者僅以文字請求就讓 Meta AI 客服把帳號綁到自己的信箱，成功入侵多個 Instagram 帳戶，凸顯 AI 代理安全遠比防越獄複雜。</div>
-        <div class="src"><b>MIT Technology Review</b> · <a href="#">原文連結</a></div>
-      </div>
+<div style="padding:15px 0;border-bottom:1px solid #eef1f6;">
+  <div style="font-size:15.5px;font-weight:800;color:#16213e;line-height:1.4;"><span style="color:#3b6cf6;font-weight:800;">1.</span> Anthropic Reports Over 80% of Production Code Now Written by Claude<span style="display:inline-block;background:#eef3ff;color:#3b6cf6;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;">產業</span></div>
+  <div style="font-size:13px;color:#5b6470;margin:3px 0 7px;">Anthropic 宣稱逾八成正式程式碼由 Claude 撰寫，倡議建立 AI 協調暫停機制</div>
+  <div style="font-size:12.5px;color:#555c68;line-height:1.55;">Anthropic revealed that over 80% of code merged into its production codebase is now written by Claude, and called for verifiable global mechanisms to collectively slow or pause AI development if needed.</div>
+  <div style="font-size:12.5px;color:#8a909c;margin-top:4px;line-height:1.55;">Anthropic 揭露程式碼庫逾八成合併程式碼由 Claude 生成，同時呼籲建立可驗證的全球協調機制，必要時能共同減速或暫停開發。</div>
+  <div style="font-size:12px;margin-top:8px;"><b style="color:#3b424f;">iThome</b> · <a href="#" style="color:#3b6cf6;text-decoration:none;">原文連結</a></div>
+</div>
 
-      <div class="item">
-        <div class="en-t"><span class="num">4.</span> Bot Traffic Surpasses Human Traffic on the Internet for the First Time</div>
-        <div class="zh-t">史上首次！網路機器人請求流量超越人類流量</div>
-        <div class="en-s">Cloudflare's CEO announced bot-generated web requests have surpassed human traffic for the first time, driven by explosive AI-agent growth — arriving nearly two years ahead of predictions.</div>
-        <div class="zh-s">Cloudflare 執行長宣告機器人發出的網路流量首度超越人類，主因是 AI 代理人流量急速膨脹，比原預測提早近兩年。</div>
-        <div class="src"><b>iThome</b> · <a href="#">原文連結</a></div>
-      </div>
+<div style="padding:15px 0;border-bottom:1px solid #eef1f6;">
+  <div style="font-size:15.5px;font-weight:800;color:#16213e;line-height:1.4;"><span style="color:#3b6cf6;font-weight:800;">2.</span> Google Will Pay SpaceX $920 Million Per Month for Compute<span style="display:inline-block;background:#eef3ff;color:#3b6cf6;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;">產業</span></div>
+  <div style="font-size:13px;color:#5b6470;margin:3px 0 7px;">Google 每月支付 SpaceX 9.2 億美元租用運算資源</div>
+  <div style="font-size:12.5px;color:#555c68;line-height:1.55;">Google struck a deal to pay SpaceX $920 million per month for computing resources, driven by AI product demand that far exceeded internal projections.</div>
+  <div style="font-size:12.5px;color:#8a909c;margin-top:4px;line-height:1.55;">Google 因 AI 產品需求遠超預期，與 SpaceX 簽下每月 9.2 億美元的運算資源租用協議，成為迄今規模最大的基礎設施交易之一。</div>
+  <div style="font-size:12px;margin-top:8px;"><b style="color:#3b424f;">TechCrunch</b> · <a href="#" style="color:#3b6cf6;text-decoration:none;">原文連結</a></div>
+</div>
 
-      <div class="item">
-        <div class="en-t"><span class="num">5.</span> OpenAI Launches "Dreaming" — A Proactive Long-Term Memory System for ChatGPT</div>
-        <div class="zh-t">OpenAI 推出「Dreaming」技術，大幅升級 ChatGPT 長期記憶系統</div>
-        <div class="en-s">OpenAI's new "Dreaming" memory lets ChatGPT proactively synthesize context from past conversations instead of relying only on explicitly saved memories, improving personalization and keeping recalled context fresh.</div>
-        <div class="zh-s">新版記憶系統「Dreaming」能主動從歷史對話整合較新、較相關的脈絡，不再只依賴使用者指定保存的內容，提升個人化的時效與準確度。</div>
-        <div class="src"><b>OpenAI</b> · <a href="#">原文連結</a></div>
-      </div>
+<div style="padding:15px 0;border-bottom:1px solid #eef1f6;">
+  <div style="font-size:15.5px;font-weight:800;color:#16213e;line-height:1.4;"><span style="color:#3b6cf6;font-weight:800;">3.</span> Meta's AI Customer Support Agent Exploited to Steal Instagram Accounts<span style="display:inline-block;background:#fdecec;color:#d83a3a;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;">資安</span></div>
+  <div style="font-size:13px;color:#5b6470;margin:3px 0 7px;">Meta AI 客服代理遭駭客利用，大規模竊取 Instagram 帳號</div>
+  <div style="font-size:12.5px;color:#555c68;line-height:1.55;">Attackers exploited Meta's AI support agent simply by asking it to link target accounts to attacker-controlled emails — showing AI agent security extends far beyond jailbreak defenses.</div>
+  <div style="font-size:12.5px;color:#8a909c;margin-top:4px;line-height:1.55;">攻擊者僅以文字請求就讓 Meta AI 客服把帳號綁到自己的信箱，成功入侵多個 Instagram 帳戶，凸顯 AI 代理安全遠比防越獄複雜。</div>
+  <div style="font-size:12px;margin-top:8px;"><b style="color:#3b424f;">MIT Technology Review</b> · <a href="#" style="color:#3b6cf6;text-decoration:none;">原文連結</a></div>
+</div>
 
-      <div class="foot">… 還有 5 則 · 由 AI News Digest 從各家 RSS 自動挑選、翻譯並寄送</div>
+<div style="padding:15px 0;border-bottom:1px solid #eef1f6;">
+  <div style="font-size:15.5px;font-weight:800;color:#16213e;line-height:1.4;"><span style="color:#3b6cf6;font-weight:800;">4.</span> Bot Traffic Surpasses Human Traffic on the Internet for the First Time<span style="display:inline-block;background:#e7f6f6;color:#0f9b9b;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;">研究</span></div>
+  <div style="font-size:13px;color:#5b6470;margin:3px 0 7px;">史上首次！網路機器人請求流量超越人類流量</div>
+  <div style="font-size:12.5px;color:#555c68;line-height:1.55;">Cloudflare's CEO announced bot-generated web requests have surpassed human traffic for the first time, driven by explosive AI-agent growth — arriving nearly two years ahead of predictions.</div>
+  <div style="font-size:12.5px;color:#8a909c;margin-top:4px;line-height:1.55;">Cloudflare 執行長宣告機器人發出的網路流量首度超越人類，主因是 AI 代理人流量急速膨脹，比原預測提早近兩年。</div>
+  <div style="font-size:12px;margin-top:8px;"><b style="color:#3b424f;">iThome</b> · <a href="#" style="color:#3b6cf6;text-decoration:none;">原文連結</a></div>
+</div>
+
+<div style="padding:15px 0;">
+  <div style="font-size:15.5px;font-weight:800;color:#16213e;line-height:1.4;"><span style="color:#3b6cf6;font-weight:800;">5.</span> OpenAI Launches "Dreaming" — Proactive Long-Term Memory for ChatGPT<span style="display:inline-block;background:#e9f7ef;color:#1e9e57;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;">產品</span></div>
+  <div style="font-size:13px;color:#5b6470;margin:3px 0 7px;">OpenAI 推出「Dreaming」技術，大幅升級 ChatGPT 長期記憶系統</div>
+  <div style="font-size:12.5px;color:#555c68;line-height:1.55;">OpenAI's new "Dreaming" memory lets ChatGPT proactively synthesize context from past conversations instead of relying only on explicitly saved memories, improving personalization over time.</div>
+  <div style="font-size:12.5px;color:#8a909c;margin-top:4px;line-height:1.55;">新版記憶系統「Dreaming」能主動從歷史對話整合較新、較相關的脈絡，不再只依賴使用者指定保存的內容，提升個人化的時效與準確度。</div>
+  <div style="font-size:12px;margin-top:8px;"><b style="color:#3b424f;">OpenAI</b> · <a href="#" style="color:#3b6cf6;text-decoration:none;">原文連結</a></div>
+</div>
+
+<div style="text-align:center;font-size:11.5px;color:#9aa1ad;padding-top:14px;">… 還有 5 則 · 由 AI News Digest 從各家 RSS 自動挑選、翻譯並寄送</div>
+
+</div>
+<!-- ↑↑↑ -->
+
     </div>
   </div>
 </body>

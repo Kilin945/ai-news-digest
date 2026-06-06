@@ -7,12 +7,34 @@
 - 嚴禁自行編造或加入清單以外的新聞；連結一律使用候選項目提供的 link
 - 若候選不足 10 則，就有幾則做幾則
 
-【步驟 2：輸出 HTML】
-只輸出一段 HTML 內文（從 <div> 開始）。最上方放一行「本週 AI 新聞回顧」與日期區間標題。每則編號，順序為「英文主、中文副」：
-- English title（粗體、主視覺）
-- 繁體中文標題（小字、灰色）
-- English summary（1～2 句）
-- 繁體中文摘要（1～2 句，小字）
-- 來源名稱與原文連結（<a href>）
+【步驟 2：分類】
+每則挑一個最貼切的分類標籤，徽章顏色用對應的底色/字色（inline style 照抄）：
+- 產業：background:#eef3ff;color:#3b6cf6
+- 產品：background:#e9f7ef;color:#1e9e57
+- 模型：background:#f0ebff;color:#6b3bf6
+- 研究：background:#e7f6f6;color:#0f9b9b
+- 資安：background:#fdecec;color:#d83a3a
+- 政策：background:#fff2e6;color:#d9772b
 
-排版用簡潔 inline style，確保 Gmail 可讀。輸出只能是 HTML 本身，開頭就是 HTML 標籤。
+【步驟 3：輸出 HTML】
+只輸出一段 HTML 內文（從 <div> 開始即可，不需要 <html>/<head>）。樣式固定，請照下面的結構與 inline style 產出（顏色、字級、圓角照抄）：
+
+最外層容器：
+<div style="font-family:-apple-system,'PingFang TC','Helvetica Neue',Arial,sans-serif;max-width:680px;margin:0 auto;color:#16213e;">
+
+最上方放一行標題列（填入本週日期區間）：
+<div style="font-size:20px;font-weight:800;color:#1a2b4a;border-left:5px solid #3b6cf6;padding-left:12px;margin:0 0 18px;">📅 本週 AI 新聞回顧 · YYYY-MM-DD ～ YYYY-MM-DD</div>
+
+每一則新聞用這個樣板（N 為編號，順序固定為「英文主、中文副」；徽章底色/字色用步驟 2 對應顏色）：
+<div style="padding:15px 0;border-bottom:1px solid #eef1f6;">
+  <div style="font-size:15.5px;font-weight:800;color:#16213e;line-height:1.4;"><span style="color:#3b6cf6;font-weight:800;">N.</span> English title<span style="display:inline-block;background:徽章底色;color:徽章字色;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px;margin-left:6px;">分類</span></div>
+  <div style="font-size:13px;color:#5b6470;margin:3px 0 7px;">繁體中文標題</div>
+  <div style="font-size:12.5px;color:#555c68;line-height:1.55;">English summary（1～2 句）</div>
+  <div style="font-size:12.5px;color:#8a909c;margin-top:4px;line-height:1.55;">繁體中文摘要（1～2 句）</div>
+  <div style="font-size:12px;margin-top:8px;"><b style="color:#3b424f;">來源名稱</b> · <a href="原文連結" style="color:#3b6cf6;text-decoration:none;">原文連結</a></div>
+</div>
+
+最後一則的 <div> 請把 border-bottom 拿掉。結尾加一行頁尾：
+<div style="text-align:center;font-size:11.5px;color:#9aa1ad;padding-top:14px;">由 AI News Digest 從各家 RSS 自動挑選、翻譯並寄送</div>
+
+再次強調：輸出內容只能是 HTML 本身，開頭就是 <div>，不要有任何其他文字。
