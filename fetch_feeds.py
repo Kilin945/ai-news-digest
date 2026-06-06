@@ -16,6 +16,39 @@ import feedparser
 FETCH_TIMEOUT = 15
 _OLDEST = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
+# 卡片配色盤（BG=底色, BAR=左側色條, TXT=徽章文字色）。每天輪轉一格，讓信件天天換色。
+PALETTE = [
+    ("#eef4ff", "#5b8def", "#3b6cf6"),
+    ("#ecf7ef", "#4caf72", "#1e9e57"),
+    ("#f1ecfb", "#8a6bd8", "#6b3bf6"),
+    ("#e8f6f5", "#2bb0a6", "#0f9b9b"),
+    ("#fbf3e3", "#d99b3f", "#b9791f"),
+    ("#fdeef0", "#e0738a", "#d83a5e"),
+    ("#edeefb", "#6b72d6", "#5159c9"),
+    ("#e8f4fb", "#3f97c9", "#2b7fb0"),
+    ("#f2f6e8", "#88a83f", "#6e8c28"),
+    ("#f9edf6", "#c56bb0", "#b04b9b"),
+]
+
+
+def palette_offset(now):
+    """依日期算出今天的配色位移（每天 +1，10 天一輪）。"""
+    return now.timetuple().tm_yday % len(PALETTE)
+
+
+def rotate_palette(offset):
+    """把配色盤整體輪轉 offset 格，回傳新的順序。"""
+    n = len(PALETTE)
+    return [PALETTE[(i + offset) % n] for i in range(n)]
+
+
+def format_palette(rows):
+    """把配色盤排成餵給 Claude 的純文字表（第 N 列對應第 N 則新聞）。"""
+    return "\n".join(
+        f"{i} BG:{bg} BAR:{bar} TXT:{txt}"
+        for i, (bg, bar, txt) in enumerate(rows, 1)
+    )
+
 
 def load_feeds(path):
     """讀 feeds.txt，每行 `<URL>` 後接 tab 或 | 與顯示名稱；# 開頭與空行略過。"""
@@ -184,11 +217,16 @@ def cmd_record(args):
     print(f"INFO: 已記錄 {len(urls)} 筆已寄 URL 到 {args.seen}", file=sys.stderr)
 
 
+def cmd_palette(args):
+    now = datetime.now(timezone.utc)
+    print(format_palette(rotate_palette(palette_offset(now))))
+
+
 def main(argv=None):
     here = os.path.dirname(os.path.abspath(__file__))
     ap = argparse.ArgumentParser(description="RSS 候選新聞抓取/已寄記錄")
     ap.add_argument("mode", nargs="?", default="collect",
-                    choices=["collect", "record"])
+                    choices=["collect", "record", "palette"])
     ap.add_argument("--feeds", default=os.path.join(here, "feeds.txt"))
     ap.add_argument("--seen", default=os.path.join(here, "state", "seen_urls.json"))
     ap.add_argument("--hours", type=int, default=48)
@@ -197,7 +235,8 @@ def main(argv=None):
     ap.add_argument("--retention-days", type=int, default=7)
     args = ap.parse_args(argv)
     socket.setdefaulttimeout(FETCH_TIMEOUT)
-    (cmd_record if args.mode == "record" else cmd_collect)(args)
+    cmds = {"record": cmd_record, "palette": cmd_palette, "collect": cmd_collect}
+    cmds[args.mode](args)
 
 
 if __name__ == "__main__":

@@ -142,3 +142,24 @@ def test_main_collect_prints_candidates_without_network(tmp_path, monkeypatch, c
                       "--hours", "48", "--widen", "72", "--min", "1"])
     out = capsys.readouterr().out
     assert "[1]" in out and "title: T" in out and "link: https://x.com/a" in out
+
+
+def test_palette_offset_advances_by_one_each_day():
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)   # day-of-year 1
+    nextday = datetime(2026, 1, 2, tzinfo=timezone.utc)  # day-of-year 2
+    assert fetch_feeds.palette_offset(nextday) == (fetch_feeds.palette_offset(base) + 1) % 10
+
+
+def test_rotate_palette_shifts_and_keeps_all_colors():
+    rotated = fetch_feeds.rotate_palette(1)
+    assert rotated[0] == fetch_feeds.PALETTE[1]          # 整體往前一格
+    assert rotated[-1] == fetch_feeds.PALETTE[0]          # 尾端繞回開頭
+    assert sorted(rotated) == sorted(fetch_feeds.PALETTE)  # 10 色都還在，沒重複沒少
+
+
+def test_format_palette_numbers_rows():
+    text = fetch_feeds.format_palette(fetch_feeds.PALETTE)
+    lines = text.splitlines()
+    assert len(lines) == 10
+    assert lines[0].startswith("1 BG:")
+    assert lines[9].startswith("10 BG:")

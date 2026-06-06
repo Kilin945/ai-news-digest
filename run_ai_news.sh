@@ -128,7 +128,8 @@ while [ $attempt -le $MAX_TRIES ]; do
     attempt=$((attempt+1)); [ $attempt -le $MAX_TRIES ] && sleep 30
     continue
   fi
-  PROMPT="$BASE_PROMPT"$'\n\n=== 候選新聞清單（只能從這裡面挑）===\n'"$CANDIDATES"
+  PALETTE_TBL="$("$PYTHON" "$DIR/fetch_feeds.py" palette 2>>"$LOG")"   # 每天輪換的卡片配色
+  PROMPT="$BASE_PROMPT"$'\n\n=== 候選新聞清單（只能從這裡面挑）===\n'"$CANDIDATES"$'\n\n=== 今日顏色表（第 N 則用第 N 列）===\n'"$PALETTE_TBL"
 
   run_claude "$TMP_OUT"; crc=$?
   OUT="$(cat "$TMP_OUT")"
