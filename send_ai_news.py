@@ -4,7 +4,8 @@
 從 stdin 讀取 HTML 內文，透過 Gmail SMTP (STARTTLS) 寄到收件匣。
 
 設定來源（優先序）：環境變數 > 同目錄 config.env。
-Gmail App Password 從 macOS Keychain 讀取，程式碼/設定檔都不含明文。
+Gmail App Password 依序讀取：環境變數 GMAIL_APP_PASSWORD（雲端 CI 的 secret）
+> macOS Keychain（本機），程式碼/設定檔都不含明文。
 
 用法：echo "<html>" | python3 send_ai_news.py ["主旨前綴"]
 """
@@ -47,7 +48,10 @@ def load_config() -> dict:
 
 
 def get_app_password(gmail_user: str, service: str) -> str:
-    """從 macOS Keychain 取得 Gmail App Password。"""
+    """取得 Gmail App Password：環境變數優先（雲端 CI 用），其次 macOS Keychain。"""
+    env_pw = os.environ.get("GMAIL_APP_PASSWORD", "").strip()
+    if env_pw:
+        return env_pw
     try:
         out = subprocess.run(
             ["security", "find-generic-password",

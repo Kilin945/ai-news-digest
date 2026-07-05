@@ -1,0 +1,107 @@
+name: daily-send
+# 雲端只負責「寄出」：程式碼取自 main、跨班次狀態取自獨立的 state 分支，
+# 寄完把 marker / seen_urls 推回 state 分支（main 永遠不被每日紀錄碰）。
+# 產稿（claude）仍在本機：launchd 早上備稿推 outbox，雲端緊跟其後寄出。
+on:
+  # 觸發交給 Cloudflare Worker（digest-cron）準點 dispatch：
+  # 台北 08:00 主班、12:00 補寄班、14:00 最後一班（slot=last）。
+  # 不用 GitHub 自家 schedule——實測延遲 1~4 小時且會整班靜默消失。
+  workflow_dispatch:
+    inputs:
+      test_send:
+        description: '只寄一封測試信驗證雲端 SMTP（不動 outbox/marker）'
+        type: boolean
+        default: false
+      slot:
+        description: '外部排程帶入的班次身分；last=當天最後一班，沒稿時才寄警示信'
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-send
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Taipei
+      GMAIL_USER: ${{ secrets.GMAIL_USER }}
+      MAIL_TO: ${{ secrets.MAIL_TO }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5          # 程式碼（main）→ 工作目錄
+      - uses: actions/checkout@v5          # 跨班次狀態（state 分支）→ _state/
+        with:
+          ref: state
+          path: _state
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: 接上 state 分支資料（symlink，讓程式照常讀 state/）
+        run: |
+          ln -sfn _state/state state
+          pip install feedparser   # fetch_feeds.py record（記已寄 URL）需要
+
+      - name: 雲端 SMTP 測試信（手動觸發且勾選 test_send 時）
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.test_send }}
+        run: |
+          set -euo pipefail
+          printf '<div style="font-family:-apple-system,sans-serif"><h3>雲端寄信測試 ✅</h3><p>這封信由 GitHub Actions（免費雲端）寄出，證明 ai-news-digest 的雲端 SMTP 路徑正常。不影響任何 outbox 或 marker。</p></div>' \
+            | python3 send_ai_news.py "雲端寄信測試（AI 新聞）"
+          echo "測試信已寄出。"
+
+      - name: 寄出今天備妥的新聞（若有）
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_send) }}
+        env:
+          # 只有「當天最後一班」沒稿才寄警示信，避免早班誤報（後面班次還能補寄）。
+          # 最後一班 = Cloudflare 觸發帶 slot=last；另保留「已過台北 15:00」的兜底條件。
+          IS_LAST: ${{ github.event_name == 'workflow_dispatch' && inputs.slot == 'last' }}
+        run: |
+          set -euo pipefail
+          MARKER="state/daily-$(date +%F)"
+          if [ -f "$MARKER" ]; then echo "今日已寄過（$MARKER），略過。"; exit 0; fi
+          if ! python3 outbox.py --ready; then
+            # 沒有可寄的 outbox：發出可見的警示註解；警示信只在最後一班發（marker 去重）。
+            echo "::warning::outbox 尚未備妥：本機 prepare 未將今天的新聞推上 state 分支。"
+            if [ "$IS_LAST" != "true" ] && [ "$(date +%H)" -lt 15 ]; then
+              echo "非最後一班（且未過 15:00），後面班次還有機會補寄，先不寄警示信。"; exit 0
+            fi
+            NOPREP="state/noprep-$(date +%F)"
+            if [ -f "$NOPREP" ]; then
+              echo "今日已寄過「沒稿」警示信（$NOPREP），不重複寄送。"; exit 0
+            fi
+            NOW="$(date '+%Y-%m-%d %H:%M')"
+            if printf '<div style="font-family:-apple-system,sans-serif"><h3>⚠️ 今天沒有可寄的 AI 新聞</h3><p>雲端於 %s 觸發寄信，但 state 分支上沒有今天的 outbox，表示本機備稿未成功（筆電沒開機、claude 失敗或 push 失敗）。請檢查本機 run.log。</p></div>' "$NOW" \
+                 | python3 send_ai_news.py "⚠️ 今天沒有可寄的 AI 新聞"; then
+              date '+%Y-%m-%d %H:%M:%S' > "$NOPREP"
+              echo "已寄出「沒稿」警示信並標記 $NOPREP。"
+            else
+              echo "::warning::警示信寄送失敗，下一班次會再試。"
+            fi
+            exit 0
+          fi
+          python3 outbox.py --html | python3 send_ai_news.py "每日 AI 新聞 Top 10"
+          # 記入已寄 URL（跨日去重）→ 清 outbox → 打 marker
+          python3 outbox.py --urls | python3 fetch_feeds.py record --seen state/seen_urls.json \
+            || echo "::warning::已寄 URL 記錄失敗（信已寄出，明天可能出現重複新聞）。"
+          python3 outbox.py --clear
+          date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
+          echo "已寄出並標記 $MARKER"
+
+      - name: 把 marker / seen_urls 推回 state 分支
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_send) }}
+        run: |
+          set -euo pipefail
+          cd _state                       # 這裡停在 state 分支
+          git config user.name "ai-news-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then echo "無變更可推。"; exit 0; fi
+          git commit -m "chore(state): 雲端寄出並更新紀錄 $(date +%F)"
+          git pull --rebase --autostash
+          git push                        # 推回 state 分支，main 不受影響

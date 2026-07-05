@@ -5,7 +5,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LA_DIR="$HOME/Library/LaunchAgents"
-WAKE_TIME="07:58:00"   # 每天喚醒時間（排在最早一個任務之前）
+WAKE_TIME="07:05:00"   # 每天喚醒時間（排在最早的備稿時段 07:10 之前）
 
 say() { printf '\033[1;34m▸ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m⚠ %s\033[0m\n' "$*"; }

@@ -1,19 +1,22 @@
 #!/bin/zsh
-# AI 新聞寄信：由 launchd 觸發。可共用於每日/每週/每月。
+# AI 新聞：由 launchd 觸發。可共用於每日/每週/每月。
 # 用法：run_ai_news.sh [prompt檔名] [主旨前綴] [kind]
-#   kind = daily(預設) | weekly | monthly  —— 決定「已寄記號」的週期
-#   不帶參數 = 每日版
-#   例：run_ai_news.sh prompt_weekly.txt "每週 AI 新聞回顧" weekly
+#   kind = daily(預設) | weekly | monthly
 #
-# 可靠性設計：每個週期只成功寄出「一次」（用 state/ 下的 marker 去重）。
-# launchd 會排多個時段；第一個在 FullWake+有網路 時跑成功的就寄出並打勾，
-# 其餘時段一律秒跳過。失敗只記 log、不寄垃圾信，留待後續時段補跑。
+# 架構（daily 已雲端化）：
+#   daily   → 本機只「產稿」進 state 分支的 outbox，寄出交給雲端 GitHub Actions
+#             （Cloudflare Worker 準點觸發 daily-send.yml：台北 08:00/12:00/14:00）
+#   weekly / monthly → 仍由本機直接寄出（照舊）
+#
+# 跨班次狀態放在獨立 state 分支（worktree ../ai-news-state）：
+#   state/daily-YYYY-MM-DD  = 今天寄過了（雲端寄完打的 marker）
+#   state/outbox.json       = 有稿待寄（含產稿日期，雲端寄前驗證是今天的稿才寄）
+#   state/noprep-YYYY-MM-DD = 今天「沒稿」警示信寄過了
+#   state/seen_urls.json    = 已寄 URL（跨日去重，雲端寄完更新）
 
 set -u
 DIR="$(cd "$(dirname "$0")" && pwd)"   # 自動偵測腳本所在目錄
 LOG="$DIR/run.log"
-STATE_DIR="$DIR/state"
-mkdir -p "$STATE_DIR"
 
 # ── 讀取個人設定 ──
 if [ ! -f "$DIR/config.env" ]; then
@@ -30,6 +33,12 @@ MODEL="${CLAUDE_MODEL:-sonnet}"
 PROMPT_FILE="${1:-prompt.txt}"
 SUBJECT_PREFIX="${2:-每日 AI 新聞 Top 10}"
 KIND="${3:-daily}"
+
+# ── state 分支 worktree（跨班次狀態的同步通道）──
+REPO_SYNC="${REPO_SYNC:-1}"
+STATE_WT="${STATE_WT:-$(dirname "$DIR")/ai-news-state}"
+STATE_DIR="$STATE_WT/state"
+export AI_NEWS_STATE_DIR="$STATE_DIR"
 
 # ── RSS 來源與已寄狀態 ──
 FEEDS_FILE="$DIR/feeds.txt"
@@ -49,9 +58,53 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"; }
 
-# 桌面通知（僅用於「不會自己好」的錯誤，例如寄信憑證失效）
+# 桌面通知（僅用於「不會自己好」的錯誤，例如寄信憑證失效、連續備稿失敗）
 notify() {  # $1=標題 $2=內文
   /usr/bin/osascript -e "display notification \"$2\" with title \"$1\" sound name \"Basso\"" >/dev/null 2>&1
+}
+
+# ── git 同步（state 分支）──
+# pull 失敗即放棄本時段：拿過期狀態會誤判「已寄過/已備妥」而漏寄（java-learn 6/27 教訓）。
+git_pull() {
+  [ "$REPO_SYNC" = 1 ] || return 0
+  local i=1 out reason
+  while [ $i -le 3 ]; do
+    if out="$(GIT_SSH_COMMAND='ssh -o ConnectTimeout=10' git -C "$STATE_WT" pull --rebase --autostash 2>&1)"; then
+      [ -n "$out" ] && echo "$out" >> "$LOG"
+      return 0
+    fi
+    echo "$out" >> "$LOG"
+    reason="$(print -r -- "$out" | grep -iE 'ssh:|Permission denied|timed out|Connection (refused|reset)|Could not resolve' | head -1 | tr -d '"\\' | cut -c1-180)"
+    [ -z "$reason" ] && reason="$(print -r -- "$out" | grep -iE 'fatal|error|致命|無法' | tail -1 | tr -d '"\\' | cut -c1-180)"
+    [ -z "$reason" ] && reason="$(print -r -- "$out" | tail -1 | cut -c1-180)"
+    log "WARN: git pull 第 $i/3 次失敗：${reason:-原因不明}。5 秒後重試。"
+    i=$((i+1)); sleep 5
+  done
+  log "WARN: git pull 連續 3 次失敗，本機狀態可能過期。"
+  return 1
+}
+
+# push 失敗最多重試 3 次；仍失敗只記 log，稿留在 worktree，下個班次會再推（java-learn 7/2 教訓）。
+git_push_state() {
+  [ "$REPO_SYNC" = 1 ] || return 0
+  git -C "$STATE_WT" add -A >>"$LOG" 2>&1 || true
+  git -C "$STATE_WT" diff --cached --quiet \
+    || git -C "$STATE_WT" commit -m "chore: 本機備妥 $(date +%F) 的稿" >>"$LOG" 2>&1 || true
+  local ahead
+  ahead="$(git -C "$STATE_WT" rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo 1)"
+  [ "$ahead" = 0 ] && return 0
+  git -C "$STATE_WT" pull --rebase --autostash >>"$LOG" 2>&1 || true
+  local i=1
+  while [ $i -le 3 ]; do
+    if git -C "$STATE_WT" push >>"$LOG" 2>&1; then
+      log "INFO: state 已推上 origin（第 $i 次嘗試，共 $ahead 個 commit）。"
+      return 0
+    fi
+    log "WARN: git push 第 $i/3 次失敗。"
+    i=$((i+1)); [ $i -le 3 ] && sleep 5
+  done
+  log "WARN: git push 連續 3 次失敗（稿在本機 worktree，下個班次會再推）。"
+  return 1
 }
 
 # 依 kind 算出本週期的識別字串
@@ -62,13 +115,6 @@ period_key() {
     *)       date +%F ;;       # 每日 YYYY-MM-DD
   esac
 }
-MARKER="$STATE_DIR/${KIND}-$(period_key)"
-
-# ── 去重：本週期已成功寄過就跳過（補跑時段會大量命中這裡）──
-if [ -f "$MARKER" ]; then
-  log "SKIP: [$SUBJECT_PREFIX] 本週期已寄過（$(basename "$MARKER")），跳過。"
-  exit 0
-fi
 
 # 等待網路就緒（喚醒後 WiFi 常需數秒～數十秒才連上）
 wait_for_network() {
@@ -84,20 +130,23 @@ wait_for_network() {
   return 0
 }
 
-# 帶逾時執行 claude，輸出寫入 $1
+# 帶逾時執行 claude，stdout 寫入 $1；stderr 另存一份供失敗時擷取原因，並一律附進 run.log
 run_claude() {
   local outfile="$1"
   : > "$outfile"
+  CLAUDE_LAST_ERR="${TMPDIR:-/tmp}/ai-news-claude-err"
+  : > "$CLAUDE_LAST_ERR"
   "$CLAUDE" -p "$PROMPT" \
     --model "$MODEL" \
     --permission-mode default \
-    --output-format text > "$outfile" 2>>"$LOG" &
+    --output-format text > "$outfile" 2>"$CLAUDE_LAST_ERR" &
   local cpid=$!
   ( sleep "$CLAUDE_TIMEOUT"; kill -TERM "$cpid" 2>/dev/null ) &
   local wpid=$!
   wait "$cpid" 2>/dev/null
   local rc=$?
   kill "$wpid" 2>/dev/null; wait "$wpid" 2>/dev/null
+  cat "$CLAUDE_LAST_ERR" >> "$LOG"
   return $rc
 }
 
@@ -112,10 +161,42 @@ looks_valid() {
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') 開始 [$SUBJECT_PREFIX] (kind=$KIND) =====" >> "$LOG"
 
+# ── 同步 state 分支（worktree 不在就先建）──
+if [ "$REPO_SYNC" = 1 ] && [ ! -d "$STATE_WT" ]; then
+  git -C "$DIR" fetch origin state >>"$LOG" 2>&1
+  if ! git -C "$DIR" worktree add "$STATE_WT" state >>"$LOG" 2>&1; then
+    log "ERROR: 建立 state worktree（$STATE_WT）失敗，放棄本時段。"
+    exit 6
+  fi
+  log "INFO: 已建立 state worktree：$STATE_WT"
+fi
+if ! git_pull; then
+  log "WARN: state 分支同步失敗，放棄本時段（避免用過期狀態誤判）。"
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, 同步失敗) [$SUBJECT_PREFIX] =====" >> "$LOG"
+  exit 1
+fi
+mkdir -p "$STATE_DIR"
+
+MARKER="$STATE_DIR/${KIND}-$(period_key)"
+
+# ── 去重：本週期已成功寄過就跳過（補跑時段會大量命中這裡）──
+if [ -f "$MARKER" ]; then
+  log "SKIP: [$SUBJECT_PREFIX] 本週期已寄過（$(basename "$MARKER")），跳過。"
+  exit 0
+fi
+
+# daily：今天的稿已備妥就不重產，但要確保有推上 origin（補推之前失敗的 push）
+if [ "$KIND" = "daily" ] && "$PYTHON" "$DIR/outbox.py" --ready >/dev/null 2>&1; then
+  log "SKIP: 今日稿已備妥（outbox），確保已推上 origin 後跳過。"
+  git_push_state
+  exit 0
+fi
+
 BASE_PROMPT="$(cat "$DIR/$PROMPT_FILE")"
 TMP_OUT="$(mktemp -t ai-news)"
 
 HTML=""
+why=""
 attempt=1
 while [ $attempt -le $MAX_TRIES ]; do
   if ! wait_for_network; then break; fi    # 網路沒就緒就不浪費 claude 額度，留待補跑
@@ -138,19 +219,39 @@ while [ $attempt -le $MAX_TRIES ]; do
     log "INFO: 第 $attempt 次嘗試成功。"
     break
   fi
-  log "WARN: 第 $attempt/$MAX_TRIES 次嘗試失敗 (rc=$crc, 長度=${#OUT})，30s 後重試。"
+  # 失敗原因優先取 claude 的 stdout（錯誤多半印在這），其次取 stderr 末 3 行，皆空標示無輸出。
+  why="$(print -r -- "$OUT" | tr '\n' ' ' | tr -s ' ' | tr -d '"\\' | cut -c1-200)"
+  [ -z "$why" ] && why="$(tail -n 3 "$CLAUDE_LAST_ERR" 2>/dev/null | tr '\n' ' ' | tr -s ' ' | tr -d '"\\' | cut -c1-200)"
+  [ -z "$why" ] && why="claude 未輸出任何內容。"
+  log "WARN: 第 $attempt/$MAX_TRIES 次嘗試失敗 (rc=$crc, 長度=${#OUT})：$why"
   attempt=$((attempt+1))
   [ $attempt -le $MAX_TRIES ] && sleep 30
 done
 rm -f "$TMP_OUT"
 
 if [ -z "$HTML" ]; then
-  # 失敗：不寄垃圾、不寄重複通知，只記 log，留待後續補跑時段
+  # 失敗：不寄垃圾、只記 log 並發桌面通知，留待後續補跑時段
+  if [ "$KIND" = "daily" ]; then
+    notify "⚠️ AI 新聞備稿失敗" "claude 連續 $MAX_TRIES 次失敗：${why:-詳見 run.log}。下個班次會再試。"
+  fi
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, 失敗待補跑) [$SUBJECT_PREFIX] =====" >> "$LOG"
   exit 1
 fi
 
-# 成功：寄出新聞並打上「本週期已寄」記號
+if [ "$KIND" = "daily" ]; then
+  # ── daily：產稿進 outbox 並推上 state 分支，寄出交給雲端 ──
+  if ! print -r -- "$HTML" | "$PYTHON" "$DIR/outbox.py" --to-outbox >>"$LOG" 2>&1; then
+    log "ERROR: 寫入 outbox 失敗，本時段放棄（下個班次會重產）。"
+    echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, outbox 失敗) [$SUBJECT_PREFIX] =====" >> "$LOG"
+    exit 1
+  fi
+  git_push_state
+  log "INFO: 今日稿已備妥並推上 state 分支，等雲端班次（08:00/12:00/14:00）寄出。"
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=0, 備稿完成) [$SUBJECT_PREFIX] =====" >> "$LOG"
+  exit 0
+fi
+
+# ── weekly / monthly：照舊由本機直接寄出 ──
 SEND_OUT="$(echo "$HTML" | "$PYTHON" "$DIR/send_ai_news.py" "$SUBJECT_PREFIX" 2>&1)"
 RC=$?
 echo "$SEND_OUT" >> "$LOG"
@@ -163,6 +264,7 @@ if [ $RC -eq 0 ]; then
     | "$PYTHON" "$DIR/fetch_feeds.py" record --seen "$SEEN_FILE" 2>>"$LOG"; then
     log "WARN: 已寄 URL 記錄失敗（不影響本次寄送，下次可能出現重複新聞）。"
   fi
+  git_push_state
   log "INFO: 已寄出並標記 $(basename "$MARKER")。"
 else
   # 寄信失敗（多半是 Gmail App Password 失效，重試也不會好）→ 主動通知

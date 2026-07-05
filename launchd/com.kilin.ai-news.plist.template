@@ -13,14 +13,14 @@
         <string>daily</string>
     </array>
 
-    <!-- 多個時段：第一個在 FullWake+有網路 時成功的就寄，其餘靠 marker 秒跳過 -->
+    <!-- 備稿時段：趕在雲端寄信班次（台北 08:00/12:00/14:00）之前產稿推 outbox。
+         第一個在 FullWake+有網路 時成功的就備稿，其餘靠 marker/outbox 秒跳過 -->
     <key>StartCalendarInterval</key>
     <array>
-        <dict><key>Hour</key><integer>8</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Hour</key><integer>10</integer><key>Minute</key><integer>30</integer></dict>
-        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
-        <dict><key>Hour</key><integer>14</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
+        <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>30</integer></dict>
     </array>
 
     <key>StandardOutPath</key>
