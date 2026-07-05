@@ -18,18 +18,30 @@
 
 ## 架構
 
+**每日信**：本機只負責「產稿」，寄出交給雲端（跟筆電是否開機、有沒有網路脫鉤）。
+**每週 / 每月信**：仍由本機直接寄出。
+
 ```
-每天 07:58  pmset 喚醒 Mac（接電源時最可靠）
-─────────────────────────────────────────────────────
-每天   08:00 / 09:00 / 10:30 / 12:00 / 14:00   ┐
-每週日 08:10 / 10:30 / 13:00                    ├ launchd 多時段觸發
-每月1日 08:20 / 11:00 / 15:00                   ┘
-                  │
-                  ├─ 已寄過？→ 秒跳過（marker 去重，exactly-once）
-                  ├─ 等網路就緒 → fetch_feeds.py 抓各家 RSS、濾近 48h、排除近 7 天寄過的
-                  ├─ 候選清單交給 claude -p（不上網，只挑重點＋翻譯）→ HTML
-                  └─ send_ai_news.py → Gmail SMTP 寄進收件匣 → 打 marker、記錄已寄連結
+本機（launchd 備稿）                          雲端
+─────────────────────────────                ─────────────────────────────
+每天 07:05  pmset 喚醒 Mac                    Cloudflare Worker digest-cron（準點鬧鐘）
+每天 07:10 / 09:30 / 11:30 / 13:30 備稿       台北 08:00 主班 / 12:00 補寄 / 14:00 最後一班(slot=last)
+  ├─ 同步 state 分支（pull 失敗即放棄本時段）      │ GitHub API workflow_dispatch（立即執行，不排隊）
+  ├─ 已寄過/已備妥？→ 秒跳過                       ▼
+  ├─ 抓 RSS → claude 產稿 → HTML             daily-send.yml（GitHub Actions）
+  └─ 寫 outbox → push 上 state 分支 ────────→   ├─ 已寄過？→ 秒跳過（marker 去重）
+                                               ├─ outbox 是今天的稿？→ 寄出（標題日期蓋成寄出當天）
+每週日 08:10 / 10:30 / 13:00   ┐               ├─ 沒稿且是最後一班 → 寄「沒稿」警示信（一天一封）
+每月1日 08:20 / 11:00 / 15:00  ┴ 本機直寄       └─ 打 marker、記已寄連結 → 推回 state 分支
 ```
+
+跨班次狀態放在獨立 **state 分支**（本機用旁邊的 worktree `../ai-news-state` 操作），
+main 分支永遠不被每日紀錄洗版：
+
+- `state/daily-YYYY-MM-DD` — 今天寄過了（所有班次先查它去重）
+- `state/outbox.json` — 有稿待寄（含產稿日期，只有「今天的稿」才會被寄出，過期稿不寄）
+- `state/noprep-YYYY-MM-DD` — 今天「沒稿」警示過了（警示信一天最多一封）
+- `state/seen_urls.json` — 已寄連結（跨日去重）
 
 ### 可靠性設計
 
@@ -40,9 +52,10 @@
 - **等網路 + 逾時 + 重試**：喚醒後先探測網路就緒才呼叫 claude；單次有逾時上限；失敗自動重試。
 - **失敗不寄垃圾**：驗證輸出為有效 HTML 才寄；失敗只記 `run.log`，留待後續時段補跑，不會把錯誤訊息當成新聞寄出。
 
-> 結果：插電過夜最即時（08:00 就收到）；純電池那天也會在你開電腦後的下一個時段自動補寄，且永不重複。
+> 結果：只要早上任一備稿時段筆電是醒的，08:00（或下一班 12:00/14:00）就準時收到信；整天都沒開機則 14:00 收到警示信。你只要記兩個時間：**08:00 收信、14:00 沒信看警示**。
 
-> 💡 為什麼用本機而非雲端排程？Anthropic 雲端沙箱封鎖所有外送 SMTP 埠（25/465/587），無法直接寄信進收件匣。改用本機 launchd 後，本機 SMTP 暢通，可直接送達。
+> 💡 為什麼觸發用 Cloudflare 而非 GitHub schedule？實測 GitHub schedule 延遲 1~4 小時、台北 08:00 前後的班次會整班靜默消失。Cloudflare Workers Cron 準點開槍、數十秒內 GitHub run 就建立。
+> 💡 為什麼產稿仍在本機？產稿靠 claude CLI（本機已登入、不另花 API 費用）；寄信才是怕筆電沒開的環節，所以只把「寄出」搬上雲端。
 
 ## 檔案
 
@@ -53,7 +66,9 @@
 | `fetch_feeds.py` | 抓各家 RSS、濾時間窗、排除近 7 天寄過的連結，輸出候選清單；另有記錄已寄連結的模式 |
 | `feeds.txt` | 新聞來源清單（一行一個 RSS），自行增減即可，不用改程式 |
 | `requirements.txt` | Python 依賴（`feedparser`）|
-| `send_ai_news.py` | SMTP 寄信，設定讀 config.env、密碼讀 Keychain |
+| `send_ai_news.py` | SMTP 寄信，設定讀 config.env、密碼讀環境變數（雲端）或 Keychain（本機）|
+| `outbox.py` | state 分支上 outbox 的存取（存稿 / 驗稿 / 取稿蓋日期 / 清除）|
+| `.github/workflows/daily-send.yml` | 雲端寄信（由 Cloudflare Worker digest-cron 準點觸發）|
 | `config.env.example` | 個人設定範本（**進版控**）|
 | `config.env` | 你的實際設定（**被 .gitignore**）|
 | `prompt.txt` / `prompt_weekly.txt` / `prompt_monthly.txt` | 三種版本的指令 |
@@ -72,7 +87,9 @@ security add-generic-password -U \
 ./install.sh
 ```
 
-`install.sh` 會自動：偵測 `claude` / `python3` 路徑寫進 `config.env` → 由範本產生 plist（填入本專案絕對路徑）→ 安裝並載入三個排程 → 詢問是否設定每天 07:58 定時喚醒。
+`install.sh` 會自動：偵測 `claude` / `python3` 路徑寫進 `config.env` → 由範本產生 plist（填入本專案絕對路徑）→ 安裝並載入三個排程 → 詢問是否設定每天 07:05 定時喚醒。
+
+雲端寄信另需一次性設定（已完成則免）：GitHub repo secrets `GMAIL_USER` / `MAIL_TO` / `GMAIL_APP_PASSWORD`，以及 `~/Workspace/digest-cron` Worker 的 TARGETS 時刻表（見該專案 README）。
 
 ## 手動測試
 
