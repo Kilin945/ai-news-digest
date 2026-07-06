@@ -230,9 +230,11 @@ done
 rm -f "$TMP_OUT"
 
 if [ -z "$HTML" ]; then
-  # 失敗：不寄垃圾、只記 log 並發桌面通知，留待後續補跑時段
-  if [ "$KIND" = "daily" ]; then
-    notify "⚠️ AI 新聞備稿失敗" "claude 連續 $MAX_TRIES 次失敗：${why:-詳見 run.log}。下個班次會再試。"
+  # 失敗：不寄垃圾、只記 log，留待後續備稿班次補跑。
+  # 桌面通知只在「最後一個備稿班（過 13:00）」仍失敗時才發——此時今天不會再自動好，
+  # 通知才代表「該動手了」；前面班次失敗默默記 log，不製造模稜兩可的提醒。
+  if [ "$KIND" = "daily" ] && [ "$(date +%H%M)" -ge 1300 ]; then
+    notify "⚠️ 今天的 AI 新聞備不出來" "原因：${why:-詳見 run.log}。今天不會自動寄了，請開電腦執行 claude 後跑 /login。"
   fi
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, 失敗待補跑) [$SUBJECT_PREFIX] =====" >> "$LOG"
   exit 1
