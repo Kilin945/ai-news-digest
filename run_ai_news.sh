@@ -25,6 +25,9 @@ if [ ! -f "$DIR/config.env" ]; then
 fi
 source "$DIR/config.env"
 export GMAIL_USER MAIL_TO KEYCHAIN_SERVICE
+# 長效 OAuth token 給 headless 環境用（launchd 讀不到桌面 session 的互動憑證，
+# 公司帳號的互動 token 又不給背景程序用，故改用 setup-token 產的長效 token）。
+[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ] && export CLAUDE_CODE_OAUTH_TOKEN
 
 CLAUDE="${CLAUDE_BIN:-$HOME/.local/bin/claude}"
 PYTHON="${PYTHON_BIN:-/opt/homebrew/bin/python3}"
