@@ -13,13 +13,13 @@
         <string>daily</string>
     </array>
 
-    <!-- 備稿時段：趕在雲端寄信班次（台北 08:00/12:00/14:00）之前產稿推 outbox。
+    <!-- 中午版備稿：iThome 等來源的主力新聞約中午 12:07 才上架，故等到 12:15 後才撈，
+         池子已長滿、較能湊足 10 則。趕在雲端寄信班次（台北 13:00/14:00）之前推 outbox。
          第一個在 FullWake+有網路 時成功的就備稿，其餘靠 marker/outbox 秒跳過 -->
     <key>StartCalendarInterval</key>
     <array>
-        <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
-        <dict><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
-        <dict><key>Hour</key><integer>11</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>15</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>50</integer></dict>
         <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>30</integer></dict>
     </array>
 
