@@ -1,10 +1,14 @@
 name: daily-send
-# 雲端只負責「寄出」：程式碼取自 main、跨班次狀態取自獨立的 state 分支，
+# 雲端負責「寄出」與「體檢」：程式碼取自 main、跨班次狀態取自獨立的 state 分支，
 # 寄完把 marker / seen_urls 推回 state 分支（main 永遠不被每日紀錄碰）。
-# 產稿（claude）仍在本機：launchd 早上備稿推 outbox，雲端緊跟其後寄出。
+# 產稿（claude）在本機：launchd 12:00/13:00 備稿推 outbox，這裡負責寄。
+#
+# 三種週期同一條路，差別只在「今天該寄哪些」（由 outbox.py --due-kinds 決定）：
+#   daily   每天寄
+#   weekly  週日寄（前一天週六備稿）
+#   monthly 當月最後一天寄（前一天倒數第二天備稿）
 on:
-  # 觸發交給 Cloudflare Worker（digest-cron）準點 dispatch：
-  # 台北 08:00 主班、12:00 補寄班、14:00 最後一班（slot=last）。
+  # 觸發交給 Cloudflare Worker（digest-cron）準點 dispatch：台北 14:00（slot=last）。
   # 不用 GitHub 自家 schedule——實測延遲 1~4 小時且會整班靜默消失。
   workflow_dispatch:
     inputs:
@@ -55,43 +59,91 @@ jobs:
             | python3 send_ai_news.py "雲端寄信測試（AI 新聞）"
           echo "測試信已寄出。"
 
-      - name: 寄出今天備妥的新聞（若有）
+      - name: 寄出今天到期的各週期
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_send) }}
+        run: |
+          set -euo pipefail
+          MISSING=""
+          for KIND in $(python3 outbox.py --due-kinds); do
+            PERIOD="$(python3 outbox.py --period-key "$KIND")"
+            MARKER="state/${KIND}-${PERIOD}"
+            if [ -f "$MARKER" ]; then
+              echo "[$KIND] 本週期已寄過（$MARKER），略過。"; continue
+            fi
+            if ! python3 outbox.py --ready "$KIND"; then
+              # 沒有可寄的稿：先記下來，警示信留到後面統一發（一封講完當天所有缺項）
+              echo "::warning::[$KIND] outbox 尚未備妥，本機備稿未推上 state 分支。"
+              MISSING="$MISSING $KIND"; continue
+            fi
+            case "$KIND" in
+              daily)   SUBJECT="每日 AI 新聞 Top 10" ;;
+              weekly)  SUBJECT="每週 AI 新聞回顧" ;;
+              monthly) SUBJECT="每月 AI 新聞回顧" ;;
+            esac
+            python3 outbox.py --html "$KIND" | python3 send_ai_news.py "$SUBJECT"
+            # 記入已寄 URL（跨週期去重）→ 清 outbox → 打 marker
+            python3 outbox.py --urls "$KIND" \
+              | python3 fetch_feeds.py record --seen state/seen_urls.json \
+              || echo "::warning::[$KIND] 已寄 URL 記錄失敗（信已寄出，下次可能出現重複新聞）。"
+            python3 outbox.py --clear "$KIND"
+            date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
+            echo "[$KIND] 已寄出並標記 $MARKER"
+          done
+          echo "MISSING=${MISSING# }" >> "$GITHUB_ENV"
+
+      - name: 缺稿體檢與警示信
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_send) }}
         env:
-          # 只有「當天最後一班」沒稿才寄警示信，避免早班誤報（後面班次還能補寄）。
-          # 最後一班 = Cloudflare 觸發帶 slot=last；另保留「已過台北 15:00」的兜底條件。
+          # 只有「當天最後一班」沒稿才寄警示信，避免早班誤報。
+          # 最後一班 = Cloudflare 觸發帶 slot=last；另保留「已過台北 15:00」的兜底（手動補救時也適用）。
           IS_LAST: ${{ github.event_name == 'workflow_dispatch' && inputs.slot == 'last' }}
         run: |
           set -euo pipefail
-          MARKER="state/daily-$(date +%F)"
-          if [ -f "$MARKER" ]; then echo "今日已寄過（$MARKER），略過。"; exit 0; fi
-          if ! python3 outbox.py --ready; then
-            # 沒有可寄的 outbox：發出可見的警示註解；警示信只在最後一班發（marker 去重）。
-            echo "::warning::outbox 尚未備妥：本機 prepare 未將今天的新聞推上 state 分支。"
-            if [ "$IS_LAST" != "true" ] && [ "$(date +%H)" -lt 15 ]; then
-              echo "非最後一班（且未過 15:00），後面班次還有機會補寄，先不寄警示信。"; exit 0
-            fi
-            NOPREP="state/noprep-$(date +%F)"
-            if [ -f "$NOPREP" ]; then
-              echo "今日已寄過「沒稿」警示信（$NOPREP），不重複寄送。"; exit 0
-            fi
-            NOW="$(date '+%Y-%m-%d %H:%M')"
-            if printf '<div style="font-family:-apple-system,sans-serif"><h3>⚠️ 今天沒有可寄的 AI 新聞</h3><p>雲端於 %s 觸發寄信，但 state 分支上沒有今天的 outbox，表示本機備稿未成功（筆電沒開機、claude 失敗或 push 失敗）。請檢查本機 run.log。</p></div>' "$NOW" \
-                 | python3 send_ai_news.py "⚠️ 今天沒有可寄的 AI 新聞"; then
-              date '+%Y-%m-%d %H:%M:%S' > "$NOPREP"
-              echo "已寄出「沒稿」警示信並標記 $NOPREP。"
-            else
-              echo "::warning::警示信寄送失敗，下一班次會再試。"
-            fi
-            exit 0
+          MISSING="${MISSING:-}"
+          if [ -z "$MISSING" ]; then echo "今天該寄的都寄了，無需警示。"; exit 0; fi
+          if [ "$IS_LAST" != "true" ] && [ "$(date +%H)" -lt 15 ]; then
+            echo "非最後一班（且未過 15:00），後面班次還有機會補寄，先不寄警示信。"; exit 0
           fi
-          python3 outbox.py --html | python3 send_ai_news.py "每日 AI 新聞 Top 10"
-          # 記入已寄 URL（跨日去重）→ 清 outbox → 打 marker
-          python3 outbox.py --urls | python3 fetch_feeds.py record --seen state/seen_urls.json \
-            || echo "::warning::已寄 URL 記錄失敗（信已寄出，明天可能出現重複新聞）。"
-          python3 outbox.py --clear
-          date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
-          echo "已寄出並標記 $MARKER"
+
+          TODAY="$(date +%F)"
+          # 本機最後一個備稿班失敗時會自己先寄一封並打 alert marker（那條路最即時）。
+          # 這裡只補「本機沒能寄成」的那些——多半是本機根本沒網路，只有雲端發得出信。
+          PENDING=""
+          for K in $MISSING; do
+            if [ -f "state/alert-$K-$TODAY" ]; then
+              echo "[$K] 本機已寄過警示信（alert-$K-$TODAY），不重複。"; continue
+            fi
+            PENDING="$PENDING $K"
+          done
+          PENDING="${PENDING# }"
+          if [ -z "$PENDING" ]; then echo "缺項都已由本機警示過，不重複寄。"; exit 0; fi
+
+          ITEMS=""
+          for K in $PENDING; do ITEMS="$ITEMS<li>$K</li>"; done
+
+          # 本機每個備稿時段都會留一行 RESULT，出事那天才會把它推上 state 分支。
+          # 檔案不在 = 本機一次都沒能連上 GitHub，這本身就是答案，不能寫成「查無資料」。
+          ATT="state/attempts-$TODAY.log"
+          if [ -s "$ATT" ]; then
+            DETAIL="<p><b>本機今天各備稿時段：</b></p><pre style=\"background:#f6f7f9;padding:10px;border-radius:6px;font-size:12px\">$(cat "$ATT")</pre>"
+          else
+            DETAIL="<p><b>本機今天沒有留下任何時段紀錄。</b>備稿程式一次都沒能連上 GitHub，最可能是筆電整天沒有真正喚醒——闔蓋加電池時 launchd 只會把機器叫進 DarkWake，那個狀態下沒有網路。</p>"
+          fi
+
+          NOW="$(date '+%Y-%m-%d %H:%M')"
+          BODY="<div style=\"font-family:-apple-system,sans-serif\">
+          <h3>⚠️ 今天有信沒寄出</h3>
+          <p>雲端於 $NOW 體檢，發現以下週期今天該寄卻沒有可寄的稿：</p>
+          <ul>$ITEMS</ul>
+          $DETAIL
+          </div>"
+
+          if printf '%s' "$BODY" | python3 send_ai_news.py "⚠️ AI 新聞今天有信沒寄出"; then
+            for K in $PENDING; do date '+%Y-%m-%d %H:%M:%S' > "state/alert-$K-$TODAY"; done
+            echo "已寄出體檢警示信，標記：$PENDING"
+          else
+            echo "::warning::警示信寄送失敗，下一班次會再試。"
+          fi
 
       - name: 把 marker / seen_urls 推回 state 分支
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.test_send) }}

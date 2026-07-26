@@ -5,22 +5,21 @@
     <key>Label</key>
     <string>com.kilin.ai-news</string>
 
+    <!-- 一個 job 依序跑三種週期（run_slot.sh），不是三個 job 各排同一個整點。
+         三個 job 同時觸發會搶 ../ai-news-state 的 git index.lock，先到的成功、
+         後到的莫名其妙失敗。非備稿日的週期會在腳本最前面秒退，成本趨近於零。 -->
     <key>ProgramArguments</key>
     <array>
-        <string>__PROJECT_DIR__/run_ai_news.sh</string>
-        <string>prompt.txt</string>
-        <string>每日 AI 新聞 Top 10</string>
-        <string>daily</string>
+        <string>__PROJECT_DIR__/run_slot.sh</string>
     </array>
 
-    <!-- 中午版備稿：iThome 等來源的主力新聞約中午 12:07 才上架，故等到 12:15 後才撈，
-         池子已長滿、較能湊足 10 則。趕在雲端寄信班次（台北 13:00/14:00）之前推 outbox。
-         第一個在 FullWake+有網路 時成功的就備稿，其餘靠 marker/outbox 秒跳過 -->
+    <!-- 只有 12:00 有 pmset 定時 FullWake 撐腰，是唯一保證跑得起來的班；
+         13:00 是補救班，靠「你人在電腦前」的機會。兩班都在寄出班（雲端 14:00）之前。
+         時間全部對齊整點，且刻意不排晚班——最後一班太晚的話，失敗了也沒時間補救。 -->
     <key>StartCalendarInterval</key>
     <array>
-        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>15</integer></dict>
-        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>50</integer></dict>
-        <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>30</integer></dict>
+        <dict><key>Hour</key><integer>12</integer><key>Minute</key><integer>0</integer></dict>
+        <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
     </array>
 
     <key>StandardOutPath</key>

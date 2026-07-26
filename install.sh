@@ -5,7 +5,11 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LA_DIR="$HOME/Library/LaunchAgents"
-WAKE_TIME="07:05:00"   # 每天喚醒時間（排在最早的備稿時段 07:10 之前）
+# 每天喚醒時間。必須對齊第一個備稿時段（12:00）——pmset 只能設一組重複喚醒，
+# 那一次 FullWake 是整天唯一保證有網路的時刻，備稿時段沒貼在它後面就等於沒有保證。
+# 改備稿時間務必同步改這裡（7/26 教訓：備稿從早上搬到中午，喚醒留在 07:05 沒動，
+# 中午那些班全都只有 DarkWake、連 DNS 都解不到）。
+WAKE_TIME="12:00:00"
 
 say() { printf '\033[1;34m▸ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m⚠ %s\033[0m\n' "$*"; }
@@ -82,6 +86,6 @@ else
 fi
 
 echo
-ok "安裝完成！手動測試：./run_ai_news.sh"
+ok "安裝完成！手動測試：./run_slot.sh"
 echo "  目前排程："
 launchctl list | grep ai-news || true

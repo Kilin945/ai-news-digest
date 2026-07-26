@@ -110,16 +110,41 @@ git_push_state() {
   return 1
 }
 
-# 依 kind 算出本週期的識別字串
-period_key() {
-  case "$KIND" in
-    weekly)  date +%G-W%V ;;   # ISO 年-週
-    monthly) date +%Y-%m ;;
-    *)       date +%F ;;       # 每日 YYYY-MM-DD
-  esac
+# 每個時段留一行結果，方便事後一眼看完當天發生什麼事：
+#   2026-07-26 13:00:12 RESULT daily FAIL claude 逾時
+# 沒有這行就代表「這個時段根本沒被觸發」（機器沒醒），跟「跑了但失敗」是兩回事，
+# 混在一起就無從除錯——今天 7/26 就是靠逐行對時間戳才確定機器是醒著的。
+result() {  # $1=OK|SKIP|FAIL  $2=說明
+  log "RESULT $KIND $1 $2"
+}
+
+# 最後一班仍然失敗 → 當下直接寄警示信，不等雲端 14:00 那班。
+# 本機寄不出去（多半是沒網路）就不寫 marker，雲端看不到 marker 會補寄，兩層不會重複。
+# 順序不可顛倒：一定要「確認寄信成功」才寫 marker，反過來會變成沒信也沒人知道。
+send_local_alert() {  # $1=失敗原因
+  local why="$1" today attempts body
+  today="$(date +%F)"
+  attempts="$STATE_DIR/attempts-$today.log"
+  # 平常成功的日子不留檔，只有出事這天才把當天各時段的結果送上 state 分支供雲端引用
+  grep "^$today .*RESULT " "$LOG" > "$attempts" 2>/dev/null || true
+  body="<div style=\"font-family:-apple-system,sans-serif\">
+<h3>⚠️ $SUBJECT_PREFIX 今天備稿失敗</h3>
+<p>最後一個備稿時段仍然失敗，今天不會自動寄出。</p>
+<p><b>原因：</b>${why:-詳見 run.log}</p>
+<p><b>今天各時段：</b></p>
+<pre style=\"background:#f6f7f9;padding:10px;border-radius:6px;font-size:12px\">$(cat "$attempts" 2>/dev/null)</pre>
+</div>"
+  if print -r -- "$body" | "$PYTHON" "$DIR/send_ai_news.py" "⚠️ $SUBJECT_PREFIX 備稿失敗" >>"$LOG" 2>&1; then
+    date '+%Y-%m-%d %H:%M:%S' > "$STATE_DIR/alert-$KIND-$today"
+    log "INFO: 已從本機寄出警示信並標記 alert-$KIND-$today。"
+  else
+    log "WARN: 本機警示信寄送失敗，改由雲端 14:00 那班補寄。"
+  fi
+  git_push_state
 }
 
 # 等待網路就緒（喚醒後 WiFi 常需數秒～數十秒才連上）
+# 主呼叫點在主流程開頭、git 同步之前；產稿迴圈裡再呼叫一次是防中途斷線，網路正常時會立即返回。
 wait_for_network() {
   local i=0
   until curl -sf --max-time 5 https://www.google.com/generate_204 >/dev/null 2>&1; do
@@ -162,7 +187,32 @@ looks_valid() {
   return 0
 }
 
+START_HHMM="$(date +%H%M)"   # 本次啟動時間，用來判斷自己是不是當天最後一個備稿班
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') 開始 [$SUBJECT_PREFIX] (kind=$KIND) =====" >> "$LOG"
+
+# ── 今天該備這種稿嗎？──
+# 純日期運算，不碰網路也不碰 state，所以放在最前面：非備稿日的週期（平日的週報、
+# 月中的月報）在這裡秒退，不會白跑一趟 git pull，也不會跟同時段的其他週期搶 worktree。
+# 週報週六備（週日可補備）、月報當月倒數第二天備（最後一天可補備），都比寄出日早一天。
+# 判斷寫在腳本裡而不是 launchd，是因為「當月最後一天」沒辦法用固定日期表示
+# （31 號在小月不存在、2 月更短）。
+if ! "$PYTHON" "$DIR/outbox.py" --prep-due "$KIND" >/dev/null 2>&1; then
+  result SKIP "今天不是 $KIND 的備稿日"
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=0, 非備稿日) [$SUBJECT_PREFIX] =====" >> "$LOG"
+  exit 0
+fi
+
+# ── 等網路就緒（必須在任何連外動作之前）──
+# 順序很重要，別把這段移到 git 同步後面（見 docs/decisions/2026-07-26-schedule-alignment-and-alerts.md）：
+# 闔蓋 + 電池時 launchd 鬧醒機器只會進 DarkWake，CPU 醒著但 WiFi 還沒連上。
+# 先 git pull 就會立刻「Could not resolve host」三連敗、放棄整個時段，
+# 這段本來就是為 DarkWake 寫的等待邏輯反而永遠跑不到，等於整套多時段補跑機制失效。
+if ! wait_for_network; then
+  log "WARN: 網路未就緒，放棄本時段（留待下個補跑時段）。"
+  result FAIL "網路未就緒"
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, 網路未就緒) [$SUBJECT_PREFIX] =====" >> "$LOG"
+  exit 1
+fi
 
 # ── 同步 state 分支（worktree 不在就先建）──
 if [ "$REPO_SYNC" = 1 ] && [ ! -d "$STATE_WT" ]; then
@@ -175,23 +225,27 @@ if [ "$REPO_SYNC" = 1 ] && [ ! -d "$STATE_WT" ]; then
 fi
 if ! git_pull; then
   log "WARN: state 分支同步失敗，放棄本時段（避免用過期狀態誤判）。"
+  result FAIL "state 分支同步失敗"
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, 同步失敗) [$SUBJECT_PREFIX] =====" >> "$LOG"
   exit 1
 fi
 mkdir -p "$STATE_DIR"
 
-MARKER="$STATE_DIR/${KIND}-$(period_key)"
+PERIOD="$("$PYTHON" "$DIR/outbox.py" --period-key "$KIND")"
+MARKER="$STATE_DIR/${KIND}-$PERIOD"
 
 # ── 去重：本週期已成功寄過就跳過（補跑時段會大量命中這裡）──
 if [ -f "$MARKER" ]; then
-  log "SKIP: [$SUBJECT_PREFIX] 本週期已寄過（$(basename "$MARKER")），跳過。"
+  result SKIP "本週期已寄過（$(basename "$MARKER")）"
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=0, 已寄過) [$SUBJECT_PREFIX] =====" >> "$LOG"
   exit 0
 fi
 
-# daily：今天的稿已備妥就不重產，但要確保有推上 origin（補推之前失敗的 push）
-if [ "$KIND" = "daily" ] && "$PYTHON" "$DIR/outbox.py" --ready >/dev/null 2>&1; then
-  log "SKIP: 今日稿已備妥（outbox），確保已推上 origin 後跳過。"
+# 本週期的稿已備妥就不重產，但要確保有推上 origin（補推之前失敗的 push）
+if "$PYTHON" "$DIR/outbox.py" --ready "$KIND" >/dev/null 2>&1; then
+  result SKIP "本週期稿已備妥（outbox）"
   git_push_state
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=0, 已備妥) [$SUBJECT_PREFIX] =====" >> "$LOG"
   exit 0
 fi
 
@@ -233,51 +287,30 @@ done
 rm -f "$TMP_OUT"
 
 if [ -z "$HTML" ]; then
-  # 失敗：不寄垃圾、只記 log，留待後續備稿班次補跑。
-  # 桌面通知只在「最後一個備稿班（過 13:00）」仍失敗時才發——此時今天不會再自動好，
-  # 通知才代表「該動手了」；前面班次失敗默默記 log，不製造模稜兩可的提醒。
-  if [ "$KIND" = "daily" ] && [ "$(date +%H%M)" -ge 1300 ]; then
-    notify "⚠️ 今天的 AI 新聞備不出來" "原因：${why:-詳見 run.log}。今天不會自動寄了，請開電腦執行 claude 後跑 /login。"
+  # 失敗：不寄垃圾，留待後續備稿班次補跑。
+  result FAIL "${why:-產稿失敗，詳見 run.log}"
+  # 只有「最後一個備稿班」失敗才警示——此時今天不會再自動好，通知才代表「該動手了」；
+  # 前面班次失敗默默記 log，不製造模稜兩可的提醒。
+  # 判斷用「本次啟動時間」而非現在時間：12:00 那班若跑很久拖過 13:00，
+  # 它不該搶著發警示，13:00 那班還沒開始跑。
+  if [ "$START_HHMM" -ge 1300 ] && [ ! -f "$STATE_DIR/alert-$KIND-$(date +%F)" ]; then
+    notify "⚠️ $SUBJECT_PREFIX 備不出來" "原因：${why:-詳見 run.log}。已寄警示信。"
+    send_local_alert "$why"
   fi
   echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, 失敗待補跑) [$SUBJECT_PREFIX] =====" >> "$LOG"
   exit 1
 fi
 
-if [ "$KIND" = "daily" ]; then
-  # ── daily：產稿進 outbox 並推上 state 分支，寄出交給雲端 ──
-  if ! print -r -- "$HTML" | "$PYTHON" "$DIR/outbox.py" --to-outbox >>"$LOG" 2>&1; then
-    log "ERROR: 寫入 outbox 失敗，本時段放棄（下個班次會重產）。"
-    echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, outbox 失敗) [$SUBJECT_PREFIX] =====" >> "$LOG"
-    exit 1
-  fi
-  git_push_state
-  log "INFO: 今日稿已備妥並推上 state 分支，等雲端班次（08:00/12:00/14:00）寄出。"
-  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=0, 備稿完成) [$SUBJECT_PREFIX] =====" >> "$LOG"
-  exit 0
+# ── 三種週期一律進 outbox，寄出全部交給雲端 ──
+# 本機不再直接寄任何信：寄信要成功得筆電醒著又有網路，那正是最不可靠的環節。
+# 本機只做「產稿」（靠已登入的 claude CLI，雲端做不到），寄出交給一定會跑的 GitHub Actions。
+if ! print -r -- "$HTML" | "$PYTHON" "$DIR/outbox.py" --to-outbox "$KIND" >>"$LOG" 2>&1; then
+  log "ERROR: 寫入 outbox 失敗，本時段放棄（下個班次會重產）。"
+  result FAIL "寫入 outbox 失敗"
+  echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=1, outbox 失敗) [$SUBJECT_PREFIX] =====" >> "$LOG"
+  exit 1
 fi
-
-# ── weekly / monthly：照舊由本機直接寄出 ──
-SEND_OUT="$(echo "$HTML" | "$PYTHON" "$DIR/send_ai_news.py" "$SUBJECT_PREFIX" 2>&1)"
-RC=$?
-echo "$SEND_OUT" >> "$LOG"
-if [ $RC -eq 0 ]; then
-  date '+%Y-%m-%d %H:%M:%S' > "$MARKER"
-  # 把這次信中實際出現的文章連結記入已寄清單，供跨日去重
-  if ! print -r -- "$HTML" \
-    | grep -oE "href=['\"]https?://[^'\"]+['\"]" \
-    | sed -E "s/^href=['\"]//; s/['\"]$//" \
-    | "$PYTHON" "$DIR/fetch_feeds.py" record --seen "$SEEN_FILE" 2>>"$LOG"; then
-    log "WARN: 已寄 URL 記錄失敗（不影響本次寄送，下次可能出現重複新聞）。"
-  fi
-  git_push_state
-  log "INFO: 已寄出並標記 $(basename "$MARKER")。"
-else
-  # 寄信失敗（多半是 Gmail App Password 失效，重試也不會好）→ 主動通知
-  REASON="$(echo "$SEND_OUT" | grep -iE 'error' | tail -1 | tr -d '"\\' | cut -c1-180)"
-  [ -z "$REASON" ] && REASON="請查看 run.log"
-  notify "⚠️ AI 新聞寄送失敗" "$SUBJECT_PREFIX：$REASON"
-  log "NOTIFY: 寄送失敗，已發桌面通知。原因：$REASON"
-fi
-
-echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=$RC) [$SUBJECT_PREFIX] =====" >> "$LOG"
-exit $RC
+git_push_state
+result OK "備稿完成（週期 $PERIOD）"
+echo "===== $(date '+%Y-%m-%d %H:%M:%S') 結束 (rc=0, 備稿完成) [$SUBJECT_PREFIX] =====" >> "$LOG"
+exit 0
