@@ -123,11 +123,18 @@ jobs:
 
           # 本機每個備稿時段都會留一行 RESULT，出事那天才會把它推上 state 分支。
           # 檔案不在 = 本機一次都沒能連上 GitHub，這本身就是答案，不能寫成「查無資料」。
+          # 但別把原因寫死成「沒開機」——機器醒著卻沒網路也會長一樣，
+          # 兩者要靠本機 run.log 有沒有當天的「開始」那幾行才分得出來。
           ATT="state/attempts-$TODAY.log"
           if [ -s "$ATT" ]; then
             DETAIL="<p><b>本機今天各備稿時段：</b></p><pre style=\"background:#f6f7f9;padding:10px;border-radius:6px;font-size:12px\">$(cat "$ATT")</pre>"
           else
-            DETAIL="<p><b>本機今天沒有留下任何時段紀錄。</b>備稿程式一次都沒能連上 GitHub，最可能是筆電整天沒有真正喚醒——闔蓋加電池時 launchd 只會把機器叫進 DarkWake，那個狀態下沒有網路。</p>"
+            DETAIL="<p><b>本機今天沒有留下任何時段紀錄</b>——備稿程式一次都沒能連上 GitHub。兩種可能：</p>
+          <ul>
+            <li><b>筆電整天沒醒</b>：闔蓋加電池時 launchd 只會把機器叫進 DarkWake，那個狀態下沒有網路。</li>
+            <li><b>醒著但沒有可用網路</b>：WiFi 沒開、不在範圍內，或連上了卻連不出去。</li>
+          </ul>
+          <p>開電腦跑 <code>grep '$TODAY' run.log | head</code> 就能分辨：有「開始」那幾行代表機器是醒的、缺的是網路；完全沒有才是沒醒。</p>"
           fi
 
           NOW="$(date '+%Y-%m-%d %H:%M')"
