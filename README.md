@@ -60,7 +60,8 @@ main 分支永遠不被每日紀錄洗版：
 
 筆電在「電池 + 闔蓋」時，macOS 只做 **DarkWake**（螢幕不亮、電池模式下網路受限），排程任務可能在沒有網路時被觸發而失敗。與其用 `disablesleep` 強迫機器整天清醒（耗電發熱、與系統省電機制對著幹），本專案選擇**順著系統設計**：
 
-- **先等網路再動作**：每個時段一開場就探測網路（最多等 120 秒），通了才碰 git / RSS / claude。這一步必須排在 state 同步之前，否則 DarkWake 班次會在 `git pull` 就被 DNS 打死，等網路的機制根本跑不到——詳見 [docs/decisions/2026-07-26-schedule-alignment-and-alerts.md](docs/decisions/2026-07-26-schedule-alignment-and-alerts.md)。
+- **先等網路再動作**：每個時段一開場就探測網路（最多等 **7.5 分鐘**），通了才碰 git / RSS / claude。這一步必須排在 state 同步之前，否則 DarkWake 班次會在 `git pull` 就被 DNS 打死，等網路的機制根本跑不到——詳見 [docs/decisions/2026-07-26-schedule-alignment-and-alerts.md](docs/decisions/2026-07-26-schedule-alignment-and-alerts.md)。等這麼久是為了手機熱點：Mac 要先用藍牙把 iPhone 叫醒、iPhone 才開始廣播、再關聯、再 DHCP，整串常要好幾分鐘。
+- **不只在固定時刻跑，網路一通就跑**：`launchd` 除了 12:00 / 13:00 兩個固定班，還監看網路設定（`WatchPaths`），接上 WiFi 或熱點就再觸發一次。固定班會漏——只要機器醒著上網的那段時間剛好落在兩班之間，兩班就都撲空。觸發時間窗與 marker 去重擋住重複做工，窗外觸發連 log 都不寫（只覆寫 `.last-trigger.log`），免得雜訊淹掉 `RESULT`。
 - **喚醒時間必須貼著備稿時段**：`pmset repeat` 全機只能設**一組**重複喚醒（12:00），那一次 FullWake 是整天唯一保證有網路的時刻。備稿第一班就排 12:00 貼在它後面；13:00 是補救班，靠「你人在電腦前」的機會。**改備稿時間務必同步改 `install.sh` 的 `WAKE_TIME`**：喚醒沒貼著備稿時段的話，那些班拿到的是 DarkWake，連 DNS 都解不到。
 - **marker 去重**：每個週期成功寄出後寫一個 `state/` 記號，後續時段命中就**秒跳過**，確保每週期只寄一次（exactly-once）。
 - **等網路 + 逾時 + 重試**：先探測網路就緒才呼叫 claude；單次有逾時上限；失敗自動重試。

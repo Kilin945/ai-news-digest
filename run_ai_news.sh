@@ -55,7 +55,12 @@ esac
 # ── 可調參數 ──
 MAX_TRIES=3            # claude 失敗最多重試次數
 CLAUDE_TIMEOUT=600     # 單次 claude 最長秒數
-NET_WAIT_MAX=24        # 網路就緒最多等 24×5=120 秒
+# 網路就緒最多等 90×5=450 秒（7.5 分鐘）。
+# 120 秒是照「WiFi 喚醒後慢個幾十秒」設的，對固定 WiFi 夠，對手機熱點遠遠不夠：
+# Mac 要先用藍牙把 iPhone 叫醒、iPhone 才開始廣播、再關聯、再 DHCP，整串常要好幾分鐘。
+# 7/27 實測：12:00:04 開跑、12:02:02 等滿 120 秒放棄，網路 12:04:09 才通，差 2 分 7 秒。
+# 放寬的代價趨近於零——真的沒網路時只是多空轉，那時機器本來就在睡。
+NET_WAIT_MAX=90
 
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 

@@ -22,6 +22,21 @@
         <dict><key>Hour</key><integer>13</integer><key>Minute</key><integer>0</integer></dict>
     </array>
 
+    <!-- 網路設定一變（接上 WiFi / 熱點、換網路）就再跑一次。
+         固定班會漏：7/27 機器「醒著且有網路」的時間是 12:04–12:29，
+         12:00 那班早了 4 分鐘、13:00 那班晚了 31 分鐘，兩班都沒踩進去。
+         這裡改成不賭時刻——網路一通就動手，時間窗與去重交給 run_slot.sh 與 marker。
+         launchd 不會讓同一個 Label 同時跑兩份，所以不必另外上鎖。 -->
+    <key>WatchPaths</key>
+    <array>
+        <string>/Library/Preferences/SystemConfiguration</string>
+        <string>/var/run/resolv.conf</string>
+    </array>
+
+    <!-- 網路設定在切換過程會連續改好幾次，限制最快 3 分鐘才能再啟動一次。 -->
+    <key>ThrottleInterval</key>
+    <integer>180</integer>
+
     <key>StandardOutPath</key>
     <string>__PROJECT_DIR__/launchd.out.log</string>
     <key>StandardErrorPath</key>
