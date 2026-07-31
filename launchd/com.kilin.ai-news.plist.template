@@ -7,9 +7,18 @@
 
     <!-- 一個 job 依序跑三種週期（run_slot.sh），不是三個 job 各排同一個整點。
          三個 job 同時觸發會搶 ../ai-news-state 的 git index.lock，先到的成功、
-         後到的莫名其妙失敗。非備稿日的週期會在腳本最前面秒退，成本趨近於零。 -->
+         後到的莫名其妙失敗。非備稿日的週期會在腳本最前面秒退，成本趨近於零。
+
+         外面包 caffeinate -i -s：系統睡眠設定是閒置 1 分鐘就睡，12:00 定時喚醒後
+         若沒人碰鍵盤，產稿跑到一半就會被整機睡回去中斷。-i 擋閒置睡眠、-s 擋系統睡眠，
+         撐到腳本結束為止。java-learn 那支從一開始就這樣寫，這裡是後來補齊的。
+         過去 12:00 那班常常成功，是因為人在電腦前機器本來就醒著，沒暴露這個洞。 -->
     <key>ProgramArguments</key>
     <array>
+        <string>/usr/bin/caffeinate</string>
+        <string>-i</string>
+        <string>-s</string>
+        <string>/bin/zsh</string>
         <string>__PROJECT_DIR__/run_slot.sh</string>
     </array>
 
