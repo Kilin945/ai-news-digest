@@ -21,3 +21,7 @@ state/
 !config.env.example
 secrets*
 *app-password*
+
+# 臨時：無人喚醒診斷探針（2026-08 出門前用，完事可刪）
+wake_probe.sh
+wake_probe*.log
