@@ -28,6 +28,7 @@ state 目錄來源：環境變數 AI_NEWS_STATE_DIR，預設同目錄 state/
   python3 outbox.py --send-due   KIND               # 今天該寄這種稿嗎？(exit 0/1)
   python3 outbox.py --due-kinds                     # 印出今天該寄的所有週期
   python3 outbox.py --period-key KIND               # 印出本週期代號
+  python3 outbox.py --status                        # 今天備到稿沒？（用 ./run_slot.sh status）
 """
 import datetime
 import json
@@ -200,6 +201,105 @@ def show_period_key(kind: str) -> int:
     return 0
 
 
+# ── 狀態總覽 ─────────────────────────────────────────────────
+# 存在的理由：回答「今天到底備到稿沒有」不該需要人去翻 run.log。
+# 2026-07-31 就是翻 log 翻錯——用 tail 看，被開蓋後每 3 分鐘一輪的 SKIP 記錄
+# 擠掉了真正那筆「備稿完成」，誤報成「排程沒跑」，差點據此改架構。
+# 這裡直接讀 outbox 檔與 marker（那是事實狀態，不是敘述），log 只拿來補時間。
+
+_RUN_START = re.compile(r"^===== (\d{4}-\d{2}-\d{2}) (\d\d:\d\d:\d\d) 開始 .*\(kind=(\w+)\)")
+_RUN_END = re.compile(r"^===== (\d{4}-\d{2}-\d{2}) (\d\d:\d\d:\d\d) 結束 \(rc=(\d+), ([^)]*)\)")
+
+
+def _runs_today(today: str) -> list:
+    """今天每一次執行的 (週期, 起, 訖, rc, 說明)。
+
+    刻意整份讀進來過濾，不用 tail——tail 只回答「最後發生什麼」，回答不了
+    「今天有沒有跑過」。結束行本身不帶週期，靠「開始→結束」成對出現來歸屬。
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "run.log")
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+    except OSError:
+        return []
+    runs, cur = [], None
+    for line in lines:
+        m = _RUN_START.match(line)
+        if m:
+            cur = (m.group(3), m.group(1), m.group(2))
+            continue
+        m = _RUN_END.match(line)
+        if m and cur:
+            if cur[1] == today:
+                runs.append((cur[0], cur[2], m.group(2), m.group(3), m.group(4)))
+            cur = None
+    return runs
+
+
+def _run_summary(kind: str, runs: list) -> str:
+    mine = [r for r in runs if r[0] == kind]
+    if not mine:
+        return "今天沒有執行紀錄"
+    done = [r for r in mine if r[3] == "0" and "備稿完成" in r[4]]
+    if done:
+        _, start, end, _, _ = done[-1]
+        return f"{start} 起跑、{end} 完成"
+    _, _, end, rc, note = mine[-1]
+    return f"最後一次 {end}：{note}（rc={rc}）"
+
+
+def status() -> int:
+    today = _today()
+    today_s = today.isoformat()
+    week = "一二三四五六日"[today.weekday()]
+    runs = _runs_today(today_s)
+
+    # 把實際讀取的 state 路徑印出來：專案目錄下還留著一份 6/29 的舊 state/，
+    # 忘了設 AI_NEWS_STATE_DIR 就會讀到它、看到過期資料還以為是今天的。
+    print(f"{today_s}（週{week}）{datetime.datetime.now():%H:%M}")
+    print(f"state: {STATE_DIR}")
+    print()
+
+    for kind in KINDS:
+        period = period_key(kind, today)
+        box = _load(kind)
+        sent = os.path.exists(os.path.join(STATE_DIR, f"{kind}-{period}"))
+
+        if not box.get("html"):
+            stock = "無稿" if is_prep_due(kind, today) else "非備稿日"
+            mark = "❌" if is_prep_due(kind, today) else "⏸ "
+        elif box.get("period") != period:
+            stock = f"過期稿（{box.get('period')}，本週期 {period}）"
+            mark = "❌"
+        else:
+            prepared = box.get("prepared_on", "?")
+            when = "今天備" if prepared == today_s else f"{prepared} 備"
+            stock = f"已備妥（{when}）"
+            mark = "✅"
+
+        if sent:
+            send = f"已寄出（marker {kind}-{period}）"
+        elif is_send_due(kind, today):
+            send = "今天要寄，尚未寄出"
+        else:
+            send = "今天不用寄"
+
+        print(f"  {kind:<8}{mark} {stock}")
+        print(f"  {'':<8}   {send}")
+        if is_prep_due(kind, today):
+            print(f"  {'':<8}   {_run_summary(kind, runs)}")
+        print()
+
+    # 今天發過的警示：alert-<週期>-<日期>（某週期缺稿）與 noprep-<日期>（整天沒備成）。
+    names = sorted(os.listdir(STATE_DIR)) if os.path.isdir(STATE_DIR) else []
+    alerts = [n for n in names
+              if (n.startswith("alert-") and n.endswith(today_s))
+              or n == f"noprep-{today_s}"]
+    print(f"  今天的警示：{'、'.join(alerts) if alerts else '無'}")
+    return 0
+
+
 def main() -> int:
     with_kind = {
         "--to-outbox": to_outbox,
@@ -214,6 +314,8 @@ def main() -> int:
     argv = sys.argv[1:]
     if argv == ["--due-kinds"]:
         return due_kinds()
+    if argv == ["--status"]:
+        return status()
     if len(argv) != 2 or argv[0] not in with_kind or argv[1] not in KINDS:
         print(__doc__, file=sys.stderr)
         return 2

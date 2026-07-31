@@ -24,6 +24,15 @@
 set -u
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# ./run_slot.sh status —— 今天備到稿沒？不用翻 run.log。
+# STATE_WT 的推導必須跟 run_ai_news.sh 一致：專案目錄下還留著一份 6/29 的舊 state/，
+# 少設這個環境變數就會讀到那份過期資料，看起來像今天的狀態，其實不是。
+if [ "${1:-}" = "status" ]; then
+  STATE_WT="${STATE_WT:-$(dirname "$DIR")/ai-news-state}"
+  export AI_NEWS_STATE_DIR="$STATE_WT/state"
+  exec python3 "$DIR/outbox.py" --status
+fi
+
 WINDOW_START=1200
 WINDOW_END=1345
 NOW="$((10#$(date +%H%M)))"   # 10# 強制十進位，免得 0900 這種前導零被當八進位
