@@ -73,11 +73,35 @@ notify() {  # $1=標題 $2=內文
 
 # ── git 同步（state 分支）──
 # pull 失敗即放棄本時段：拿過期狀態會誤判「已寄過/已備妥」而漏寄（java-learn 6/27 教訓）。
+# git 網路操作一律包這個，理由是 2026-08-02/03 連兩天的教訓：
+# 憑證助手拿不到 Keychain（errSecInteractionNotAllowed）時不會失敗，而是無限等下去。
+# git push 因此永不返回，launchd 同一個 label 前一次還在跑就不會再啟動，
+# 一卡就吃掉當天剩下所有班次——08-03 那次從 12:02 卡到 18:00，13:00 那班完全沒跑，
+# 稿明明產好了卻留在本機，雲端 14:00 只能寄缺稿警示。
+# BatchMode / TERMINAL_PROMPT 讓 git 不要問（要問就直接失敗，交給重試邏輯）；
+# watchdog 是保險：就算還是卡住，時限一到強制收掉，至少 log 留下痕跡、班次能往下走。
+GIT_NET_TIMEOUT="${GIT_NET_TIMEOUT:-60}"
+git_timeout() {
+  local pid wd rc
+  GIT_TERMINAL_PROMPT=0 \
+  GIT_SSH_COMMAND='ssh -o ConnectTimeout=10 -o BatchMode=yes' \
+    "$@" >>"$LOG" 2>&1 &
+  pid=$!
+  # 先收子進程再收自己：git 會生 remote-https / credential 這些孫子，只殺父的話它們會留著。
+  ( sleep "$GIT_NET_TIMEOUT"; pkill -9 -P "$pid" 2>/dev/null; kill -9 "$pid" 2>/dev/null ) >/dev/null 2>&1 &
+  wd=$!
+  wait "$pid"; rc=$?
+  kill "$wd" 2>/dev/null
+  [ "$rc" -ge 128 ] && log "WARN: git 操作超過 ${GIT_NET_TIMEOUT}s 被強制中止（若不中止會無限等待）。"
+  return "$rc"
+}
+
 git_pull() {
   [ "$REPO_SYNC" = 1 ] || return 0
   local i=1 out reason
   while [ $i -le 3 ]; do
-    if out="$(GIT_SSH_COMMAND='ssh -o ConnectTimeout=10' git -C "$STATE_WT" pull --rebase --autostash 2>&1)"; then
+    # BatchMode/TERMINAL_PROMPT：不准問憑證或 host key，要問就失敗——問了就是卡死。
+    if out="$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND='ssh -o ConnectTimeout=10 -o BatchMode=yes' git -C "$STATE_WT" pull --rebase --autostash 2>&1)"; then
       [ -n "$out" ] && echo "$out" >> "$LOG"
       return 0
     fi
@@ -101,10 +125,10 @@ git_push_state() {
   local ahead
   ahead="$(git -C "$STATE_WT" rev-list --count '@{upstream}..HEAD' 2>/dev/null || echo 1)"
   [ "$ahead" = 0 ] && return 0
-  git -C "$STATE_WT" pull --rebase --autostash >>"$LOG" 2>&1 || true
+  git_timeout git -C "$STATE_WT" pull --rebase --autostash || true
   local i=1
   while [ $i -le 3 ]; do
-    if git -C "$STATE_WT" push >>"$LOG" 2>&1; then
+    if git_timeout git -C "$STATE_WT" push; then
       log "INFO: state 已推上 origin（第 $i 次嘗試，共 $ahead 個 commit）。"
       return 0
     fi
