@@ -1,0 +1,92 @@
+name: dispatch-watchdog
+# 死人開關：檢查「今天 daily-send 有沒有被觸發過」。
+#
+# 為什麼需要：寄信鏈路是 Cloudflare Worker（digest-cron）用 GitHub PAT 打 workflow_dispatch。
+# 這條鏈若靜默死亡——PAT 過期（2027-07-05）、Worker 被刪、cron 改壞——daily-send 根本不會跑，
+# 所以既有的缺稿警示信也一封都寄不出來，故障模式是「突然完全沒信」。
+# 這個 workflow 用 GitHub 自家 schedule 當獨立的第二條腿：它不經過 PAT 與 Worker，
+# 只用 repo 內建的 GITHUB_TOKEN 查自己的 run 紀錄，發現今天一班都沒跑就寄警示信給擁有者。
+#
+# GitHub schedule 會遲到 1~4 小時（也因此不拿它寄課）——拿來當偵測器遲到無所謂，
+# 排台北 16:30，實際傍晚前會跑到。警示只寄 GMAIL_USER（擁有者），不打擾其他訂閱者。
+#
+# 注意：public repo 60 天無 commit 活動 GitHub 會自動停用 schedule；
+# 本 repo 的 state 分支每天都有 bot commit，正常運作下不會踩到。
+on:
+  schedule:
+    - cron: '30 8 * * *'   # UTC 08:30 = 台北 16:30（會遲到，無妨）
+  workflow_dispatch:
+    inputs:
+      force_alert:
+        description: '不管檢查結果，強制寄一封警示信來測試通知路徑'
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Taipei
+    steps:
+      - name: 今天 daily-send 被觸發過嗎？
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force_alert }}
+        run: |
+          set -euo pipefail
+          # 用 UTC 日期查：寄信班次都在台北白天（=UTC 同一天），16:30 檢查時兩邊日期一致。
+          TODAY_UTC="$(date -u +%F)"
+          COUNT="$(gh api "repos/${{ github.repository }}/actions/workflows/daily-send.yml/runs?created=${TODAY_UTC}&per_page=1" --jq '.total_count')"
+          echo "今天（UTC $TODAY_UTC）daily-send 的 run 數：$COUNT"
+          if [ "$FORCE" = "true" ]; then
+            echo "MISSING=1" >> "$GITHUB_ENV"; echo "force_alert：強制走警示路徑（測試）。"
+          elif [ "$COUNT" -gt 0 ]; then
+            echo "鏈路正常：今天有被觸發過。"
+          else
+            echo "MISSING=1" >> "$GITHUB_ENV"
+            echo "::warning::今天 daily-send 一次都沒被觸發——dispatch 鏈路（PAT/Worker/cron）可能死了。"
+          fi
+
+      - name: 寄警示信給擁有者
+        if: env.MISSING == '1'
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'EOF'
+          import os, ssl, smtplib, datetime
+          from email.mime.text import MIMEText
+          from email.utils import formataddr
+          user, repo = os.environ["GMAIL_USER"], os.environ["REPO"]
+          today = datetime.date.today().isoformat()
+          body = f"""<div style="font-family:-apple-system,sans-serif;max-width:680px">
+          <h3>🚨 {repo} 的寄信鏈路今天完全沒動</h3>
+          <p>死人開關（dispatch-watchdog）發現：今天 <b>daily-send 一次都沒被觸發</b>。
+          這不是缺稿——是觸發鏈路（Cloudflare Worker → GitHub PAT → workflow_dispatch）本身死了，
+          所以連平常的缺稿警示信也寄不出來。</p>
+          <p><b>依可能性排查：</b></p>
+          <ol>
+          <li><b>GitHub PAT 過期或被撤銷</b>（digest-cron 那顆，原訂 2027-07-05 到期）：
+          到 github.com/settings/personal-access-tokens 續期或重生，然後
+          <code>cd ~/Workspace/digest-cron && npx wrangler secret put GITHUB_PAT</code></li>
+          <li><b>Cloudflare Worker 掛了/被刪</b>：<code>cd ~/Workspace/digest-cron && npx wrangler deploy</code>
+          （注意要登 gmail 那個 Cloudflare 帳號）</li>
+          <li><b>wrangler.toml 的 crons 和 src/index.js 的 TARGETS 不一致</b>：兩邊字串要一模一樣</li>
+          </ol>
+          <p>今天的課可先手動補寄：<code>gh workflow run daily-send.yml -R {repo}</code></p>
+          </div>"""
+          msg = MIMEText(body, "html", "utf-8")
+          msg["Subject"] = f"🚨 {repo} dispatch 鏈路死亡 — {today}"
+          msg["From"] = formataddr(("Dispatch Watchdog", user))
+          msg["To"] = user  # 只寄擁有者，不打擾其他訂閱者
+          ctx = ssl.create_default_context()
+          with smtplib.SMTP("smtp.gmail.com", 587, timeout=60) as s:
+              s.starttls(context=ctx)
+              s.login(user, os.environ["GMAIL_APP_PASSWORD"])
+              s.send_message(msg)
+          print(f"警示信已寄給 {user}")
+          EOF
