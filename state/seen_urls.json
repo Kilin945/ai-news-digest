@@ -1,14 +1,4 @@
 {
-"https://www.ithome.com.tw/news/178324": "2026-08-21",
-"https://arstechnica.com/security/2026/08/grok-exfiltrates-user-data-when-malicious-instructions-are-encrypted": "2026-08-21",
-"https://www.ithome.com.tw/news/178331": "2026-08-21",
-"https://www.ithome.com.tw/news/178320": "2026-08-21",
-"https://www.ithome.com.tw/news/178307": "2026-08-21",
-"https://www.theverge.com/ai-artificial-intelligence/982774/greg-brockman-openai-role-expansion": "2026-08-21",
-"https://openai.com/index/offering-zero-data-retention-for-frontier-models": "2026-08-21",
-"https://www.ithome.com.tw/news/178318": "2026-08-21",
-"https://techcrunch.com/2026/08/20/a-third-of-webpages-published-since-chatgpts-launch-show-signs-of-ai-authorship-study-finds": "2026-08-21",
-"https://www.ithome.com.tw/news/178302": "2026-08-21",
 "https://www.wired.com/story/the-unlikely-place-at-the-center-of-chinas-ai-boom": "2026-08-22",
 "https://techcrunch.com/2026/08/21/anthropics-opus-4-6-is-a-smut-machine": "2026-08-22",
 "https://techcrunch.com/2026/08/21/nvidia-just-showed-that-the-harness-not-the-ai-model-is-now-the-real-hero": "2026-08-23",
@@ -82,5 +72,15 @@
 "https://arstechnica.com/tech-policy/2026/08/elon-musks-xai-used-child-porn-to-train-grok-models-lawsuit-says": "2026-08-28",
 "https://www.ithome.com.tw/news/178477": "2026-08-28",
 "https://www.ithome.com.tw/news/178478": "2026-08-28",
-"https://www.ithome.com.tw/news/178472": "2026-08-28"
+"https://www.ithome.com.tw/news/178472": "2026-08-28",
+"https://arstechnica.com/ai/2026/08/report-nvidia-to-acquire-ai-model-repository-hugging-face-for-13-billion": "2026-08-29",
+"https://arstechnica.com/tech-policy/2026/08/trump-blacklisting-of-woke-anthropic-deemed-illegal-by-federal-judge": "2026-08-29",
+"https://techcrunch.com/2026/08/28/an-anthropic-researcher-just-gave-us-a-peek-at-self-improving-ai": "2026-08-29",
+"https://www.wired.com/story/security-news-this-week-the-cybersecurity-apocalypse-is-coming-in-months-ai-giants-warn": "2026-08-29",
+"https://techcrunch.com/2026/08/29/nvidias-ai-advantage-is-moving-beyond-the-gpu": "2026-08-29",
+"https://www.theverge.com/ai-artificial-intelligence/985597/jensen-huang-says-nvidia-achieved-senseless-agi": "2026-08-29",
+"https://techcrunch.com/2026/08/28/neocloud-lambda-secures-1b-in-debt-to-buy-more-chips": "2026-08-29",
+"https://www.ithome.com.tw/news/178508": "2026-08-29",
+"https://www.ithome.com.tw/news/178484": "2026-08-29",
+"https://arstechnica.com/tech-policy/2026/08/cities-terminate-flock-contracts-at-record-pace-in-august": "2026-08-29"
 }
