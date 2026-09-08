@@ -16,7 +16,7 @@
 （例如上週六備了卻一直沒寄成）代號對不上，一律拒寄，不會寄出過期內容。
 
 state 目錄來源：環境變數 AI_NEWS_STATE_DIR，預設同目錄 state/
-（本機由 run_ai_news.sh 指向 ../ai-news-state/state；雲端靠 symlink 用預設值）。
+（本機由 run_ai_news.sh 指向 ../state/state；雲端靠 symlink 用預設值）。
 
 用法：
   print html | python3 outbox.py --to-outbox KIND   # 存稿（蓋上本週期代號）
@@ -255,8 +255,15 @@ def status() -> int:
     week = "一二三四五六日"[today.weekday()]
     runs = _runs_today(today_s)
 
-    # 把實際讀取的 state 路徑印出來：專案目錄下還留著一份 6/29 的舊 state/，
-    # 忘了設 AI_NEWS_STATE_DIR 就會讀到它、看到過期資料還以為是今天的。
+    # 把實際讀取的 state 路徑印出來。STATE_DIR 的預設值是「專案目錄下的 state/」，
+    # 那個位置在本機是不存在的（本機由 run_ai_news.sh / run_slot.sh 匯出
+    # AI_NEWS_STATE_DIR 指向 state worktree；雲端則在 checkout 後造一個
+    # state -> _state/state 的 symlink 讓預設值成立）。所以忘了設環境變數時，
+    # 這裡會顯示一個不存在的路徑、下面每一種週期都報「無稿」——印出路徑就是
+    # 為了讓人一眼看出是走錯邊，而不是真的沒備稿。
+    #
+    # 這個位置曾經留著一份 6/29 拆 worktree 前的舊 state/，忘了設環境變數會讀到
+    # 它、看到三個月前的 marker 還以為是今天的。那份已經移走，現在是讀不到就明說。
     print(f"{today_s}（週{week}）{datetime.datetime.now():%H:%M}")
     print(f"state: {STATE_DIR}")
     print()

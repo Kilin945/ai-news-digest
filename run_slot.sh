@@ -2,7 +2,7 @@
 # 一個備稿時段要做的事：依序把三種週期都問一遍。由 launchd 在 12:00 / 13:00 觸發。
 #
 # 為什麼合成一個 job 而不是三個 plist 各排 12:00：
-#   三個 job 同時觸發會同時對 ../ai-news-state 這個 worktree 做 git pull，
+#   三個 job 同時觸發會同時對 ../state 這個 worktree 做 git pull，
 #   互搶 index.lock，先到的成功、後到的莫名其妙失敗。依序跑就沒有這個問題，
 #   也把三次 git pull 省成實際需要的次數。
 #
@@ -28,7 +28,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 # STATE_WT 的推導必須跟 run_ai_news.sh 一致：專案目錄下還留著一份 6/29 的舊 state/，
 # 少設這個環境變數就會讀到那份過期資料，看起來像今天的狀態，其實不是。
 if [ "${1:-}" = "status" ]; then
-  STATE_WT="${STATE_WT:-$(dirname "$DIR")/ai-news-state}"
+  STATE_WT="${STATE_WT:-$(dirname "$DIR")/state}"
   export AI_NEWS_STATE_DIR="$STATE_WT/state"
   exec python3 "$DIR/outbox.py" --status
 fi

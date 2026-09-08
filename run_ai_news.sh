@@ -8,7 +8,7 @@
 #             （Cloudflare Worker 準點觸發 daily-send.yml：台北 08:00/12:00/14:00）
 #   weekly / monthly → 仍由本機直接寄出（照舊）
 #
-# 跨班次狀態放在獨立 state 分支（worktree ../ai-news-state）：
+# 跨班次狀態放在獨立 state 分支（worktree ../state）：
 #   state/daily-YYYY-MM-DD  = 今天寄過了（雲端寄完打的 marker）
 #   state/outbox.json       = 有稿待寄（含產稿日期，雲端寄前驗證是今天的稿才寄）
 #   state/noprep-YYYY-MM-DD = 今天「沒稿」警示信寄過了
@@ -39,7 +39,7 @@ KIND="${3:-daily}"
 
 # ── state 分支 worktree（跨班次狀態的同步通道）──
 REPO_SYNC="${REPO_SYNC:-1}"
-STATE_WT="${STATE_WT:-$(dirname "$DIR")/ai-news-state}"
+STATE_WT="${STATE_WT:-$(dirname "$DIR")/state}"
 STATE_DIR="$STATE_WT/state"
 export AI_NEWS_STATE_DIR="$STATE_DIR"
 
