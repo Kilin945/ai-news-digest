@@ -118,34 +118,26 @@ jobs:
           PENDING="${PENDING# }"
           if [ -z "$PENDING" ]; then echo "缺項都已由本機警示過，不重複寄。"; exit 0; fi
 
-          ITEMS=""
-          for K in $PENDING; do ITEMS="$ITEMS<li>$K</li>"; done
-
-          # 本機每個備稿時段都會留一行 RESULT，出事那天才會把它推上 state 分支。
-          # 檔案不在 = 本機一次都沒能連上 GitHub，這本身就是答案，不能寫成「查無資料」。
-          # 但別把原因寫死成「沒開機」——機器醒著卻沒網路也會長一樣，
-          # 兩者要靠本機 run.log 有沒有當天的「開始」那幾行才分得出來。
-          ATT="state/attempts-$TODAY.log"
-          if [ -s "$ATT" ]; then
-            DETAIL="<p><b>本機今天各備稿時段：</b></p><pre style=\"background:#f6f7f9;padding:10px;border-radius:6px;font-size:12px\">$(cat "$ATT")</pre>"
-          else
-            DETAIL="<p><b>本機今天沒有留下任何時段紀錄</b>——備稿程式一次都沒能連上 GitHub。兩種可能：</p>
-          <ul>
-            <li><b>筆電整天沒醒</b>：闔蓋加電池時 launchd 只會把機器叫進 DarkWake，那個狀態下沒有網路。</li>
-            <li><b>醒著但沒有可用網路</b>：WiFi 沒開、不在範圍內，或連上了卻連不出去。</li>
-          </ul>
-          <p>開電腦跑 <code>grep '$TODAY' run.log | head</code> 就能分辨：有「開始」那幾行代表機器是醒的、缺的是網路；完全沒有才是沒醒。</p>"
-          fi
+          # 標題要指名是哪一封——「有信沒寄出」看了還要再查一次是哪封。
+          ITEMS=""; NAMES=""
+          for K in $PENDING; do
+            case "$K" in
+              daily)   N="日報（每日 AI 新聞 Top 10）"; S="日報" ;;
+              weekly)  N="週報（每週 AI 新聞回顧）";     S="週報" ;;
+              monthly) N="月報（每月 AI 新聞回顧）";     S="月報" ;;
+            esac
+            ITEMS="$ITEMS<li>$N</li>"
+            NAMES="${NAMES:+${NAMES}、}$S"
+          done
 
           NOW="$(date '+%Y-%m-%d %H:%M')"
           BODY="<div style=\"font-family:-apple-system,sans-serif\">
-          <h3>⚠️ 今天有信沒寄出</h3>
-          <p>雲端於 $NOW 體檢，發現以下週期今天該寄卻沒有可寄的稿：</p>
+          <h3>${NAMES}沒寄出</h3>
+          <p>雲端於 $NOW 體檢，今天該寄卻沒有可寄的稿：</p>
           <ul>$ITEMS</ul>
-          $DETAIL
           </div>"
 
-          if printf '%s' "$BODY" | python3 send_ai_news.py "⚠️ AI 新聞今天有信沒寄出"; then
+          if printf '%s' "$BODY" | python3 send_ai_news.py "AI 新聞 ${NAMES}沒寄出"; then
             for K in $PENDING; do date '+%Y-%m-%d %H:%M:%S' > "state/alert-$K-$TODAY"; done
             echo "已寄出體檢警示信，標記：$PENDING"
           else
