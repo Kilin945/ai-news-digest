@@ -1,14 +1,4 @@
 {
-"https://www.theverge.com/tech/1002980/google-gemini-4-argon": "2026-10-01",
-"https://www.ithome.com.tw/news/179303": "2026-10-01",
-"https://openai.com/index/introducing-gpt-6-1-sol": "2026-10-01",
-"https://www.wired.com/story/trumps-ai-safety-accord-is-a-fancy-pinky-swear": "2026-10-01",
-"https://www.ithome.com.tw/news/179312": "2026-10-01",
-"https://www.wired.com/story/openai-sued-over-the-hugging-face-hack": "2026-10-01",
-"https://www.ithome.com.tw/news/179329": "2026-10-01",
-"https://www.ithome.com.tw/news/179332": "2026-10-01",
-"https://arstechnica.com/ai/2026/09/openai-delays-ipo-over-ai-safety-concerns": "2026-10-01",
-"https://arstechnica.com/security/2026/09/cloudflare-plans-to-issue-quantum-safe-tls-certificates": "2026-10-01",
 "https://www.ithome.com.tw/news/179337": "2026-10-02",
 "https://www.theverge.com/ai-artificial-intelligence/1003399/meta-openai-ai-agents-muse-dots-battle": "2026-10-02",
 "https://www.ithome.com.tw/news/179367": "2026-10-02",
@@ -82,5 +72,15 @@
 "https://www.ithome.com.tw/news/179490": "2026-10-08",
 "https://www.theverge.com/ai-artificial-intelligence/1005004/openai-math-release-github": "2026-10-08",
 "https://arstechnica.com/ai/2026/10/google-rolls-out-improved-synthid-ai-content-detector-now-available-globally": "2026-10-08",
-"https://www.ithome.com.tw/news/179485": "2026-10-08"
+"https://www.ithome.com.tw/news/179485": "2026-10-08",
+"https://www.theverge.com/ai-artificial-intelligence/1007276/openai-chatgpt-intelligent-ui-gpt-6": "2026-10-09",
+"https://www.theverge.com/tech/1007904/google-gemini-ai-agent-enterprise": "2026-10-09",
+"https://www.theverge.com/ai-artificial-intelligence/1008521/anthropic-open-source-oss-scanner": "2026-10-09",
+"https://techcrunch.com/2026/10/08/anthropic-changes-usage-policy-to-ban-model-abuse-and-election-interference": "2026-10-09",
+"https://techcrunch.com/2026/10/08/openais-revenue-is-reportedly-20-billion-less-than-previously-projected": "2026-10-09",
+"https://www.theverge.com/ai-artificial-intelligence/1008198/usa-today-openai-copyright-lawsuit": "2026-10-09",
+"https://www.ithome.com.tw/news/179500": "2026-10-09",
+"https://techcrunch.com/2026/10/08/fired-openai-safety-researchers-dispute-misconduct-claims-warn-of-chilling-effect": "2026-10-09",
+"https://techcrunch.com/2026/10/08/goodfire-says-its-new-inside-out-monitors-catch-rogue-ai-agents-at-a-fraction-of-the-cost": "2026-10-09",
+"https://techcrunch.com/2026/10/08/chinas-manus-raises-over-500m-in-first-funding-round-since-split-with-meta": "2026-10-09"
 }
