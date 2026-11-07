@@ -1,14 +1,9 @@
 {
-"https://www.theverge.com/podcast/1021322/anthropic-ipo-filing-s-1-claude-semianalysis-joey-brookhart-interview": "2026-10-30",
 "https://techcrunch.com/2026/10/29/mistral-releases-weights-for-its-trillion-parameter-ai-model-targeting-cybersecurity": "2026-10-31",
 "https://arstechnica.com/ai/2026/10/google-announces-gemini-4-carbon-its-latest-frontier-ai-model-that-you-cant-use": "2026-10-31",
 "https://www.theverge.com/tech/1022023/microsoft-exit-offer-layoffs-notepad": "2026-10-31",
 "https://www.wired.com/story/a-defense-contractor-gave-their-personal-ai-agent-access-to-a-secure-pentagon-system": "2026-10-31",
-"https://techcrunch.com/2026/10/29/openai-backed-thrive-holdings-acquires-adt": "2026-10-30",
-"https://www.ithome.com.tw/news/180033": "2026-10-30",
 "https://arstechnica.com/gadgets/2026/10/trump-declares-robot-imports-a-national-security-threat": "2026-10-31",
-"https://openai.com/index/updated-model-spec": "2026-10-30",
-"https://www.theverge.com/ai-artificial-intelligence/1022519/google-gemini-file-editing-documents-pdfs": "2026-10-30",
 "https://techcrunch.com/2026/10/30/anthropic-expected-to-receive-high-junk-rating-from-credit-agencies-following-ipo-report-says": "2026-11-01",
 "https://arstechnica.com/security/2026/10/anthropic-vs-code-extension-on-cursor-backdoored-for-nearly-12-hours": "2026-11-01",
 "https://www.theverge.com/tech/1023763/openai-google-microsoft-ai-scraping-standard-opt-out": "2026-11-01",
@@ -85,5 +80,15 @@
 "https://www.ithome.com.tw/news/180250": "2026-11-06",
 "https://www.ithome.com.tw/news/180262": "2026-11-06",
 "https://www.ithome.com.tw/news/180267": "2026-11-06",
-"https://techcrunch.com/2026/11/05/airbnb-says-its-launching-an-ai-travel-agent-in-the-first-half-of-2027": "2026-11-06"
+"https://techcrunch.com/2026/11/05/airbnb-says-its-launching-an-ai-travel-agent-in-the-first-half-of-2027": "2026-11-06",
+"https://techcrunch.com/2026/11/06/openai-reportedly-raises-an-additional-11-billion-at-a-1-25-trillion-valuation": "2026-11-07",
+"https://www.ithome.com.tw/news/180285": "2026-11-07",
+"https://www.wired.com/story/free-chinese-ai-models-are-getting-scary-good-at-hacking": "2026-11-07",
+"https://arstechnica.com/security/2026/11/chainalysis-says-hackers-stole-credentials-and-tokens-for-all-of-its-customers": "2026-11-07",
+"https://arstechnica.com/security/2026/11/vulnerability-allows-attackers-to-log-into-some-linux-devices-sans-password": "2026-11-07",
+"https://techcrunch.com/2026/11/05/claude-can-now-analyze-your-spending-with-its-new-personal-finance-tool": "2026-11-07",
+"https://www.theverge.com/tech/1028871/meta-muse-ai-spaces": "2026-11-07",
+"https://techcrunch.com/video/after-the-midterms-is-the-ai-industry-in-for-a-rough-two-years": "2026-11-07",
+"https://techcrunch.com/2026/11/06/crusoe-sells-troubled-wyoming-data-center-project-to-google": "2026-11-07",
+"https://arstechnica.com/tech-policy/2026/11/nvidia-ceo-jensen-huang-summoned-by-congress-over-chinese-espionage-concerns": "2026-11-07"
 }
