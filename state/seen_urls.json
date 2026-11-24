@@ -1,14 +1,4 @@
 {
-"https://www.ithome.com.tw/news/180510": "2026-11-16",
-"https://www.ithome.com.tw/news/180516": "2026-11-16",
-"https://www.ithome.com.tw/news/180515": "2026-11-16",
-"https://www.ithome.com.tw/news/180519": "2026-11-16",
-"https://www.ithome.com.tw/news/180508": "2026-11-16",
-"https://www.theverge.com/ai-artificial-intelligence/1033984/congress-export-rules-ai-chips-china": "2026-11-16",
-"https://www.ithome.com.tw/news/180511": "2026-11-16",
-"https://openai.com/index/step-toward-defining-the-standard-model": "2026-11-16",
-"https://www.ithome.com.tw/news/180498": "2026-11-16",
-"https://techcrunch.com/2026/11/15/apple-launches-new-app-to-study-how-people-use-ai-for-health": "2026-11-16",
 "https://openai.com/index/introducing-gpt-6-2-astra-sol": "2026-11-18",
 "https://techcrunch.com/2026/11/17/nvidia-says-it-doesnt-plan-to-reappoint-jensen-huang-as-ceo": "2026-11-18",
 "https://www.theverge.com/ai-artificial-intelligence/1034815/california-openai-hugging-face-lawsuit": "2026-11-18",
@@ -70,5 +60,15 @@
 "https://www.ithome.com.tw/news/180698": "2026-11-23",
 "https://www.ithome.com.tw/news/180676": "2026-11-23",
 "https://techcrunch.com/2026/11/22/openais-chief-scientist-has-thoughts-on-how-to-limit-ai-development": "2026-11-23",
-"https://www.ithome.com.tw/news/180702": "2026-11-23"
+"https://www.ithome.com.tw/news/180702": "2026-11-23",
+"https://techcrunch.com/2026/11/23/anthropic-launches-claude-ship-letting-ai-agents-review-fix-and-approve-code-changes": "2026-11-24",
+"https://techcrunch.com/2026/11/23/nvidia-reverses-course-and-brings-jensen-huang-back-as-ceo": "2026-11-24",
+"https://www.ithome.com.tw/news/180740": "2026-11-24",
+"https://openai.com/index/introducing-shirudo": "2026-11-24",
+"https://arstechnica.com/tech-policy/2026/11/states-sue-spacex-to-stop-grok-from-generating-child-sex-images-revenge-porn": "2026-11-24",
+"https://techcrunch.com/2026/11/23/amazon-snaps-up-decarts-ai-optimization-tech-for-7-5b-as-it-prepares-to-sell-trainium-chips": "2026-11-24",
+"https://www.ithome.com.tw/news/180726": "2026-11-24",
+"https://techcrunch.com/2026/11/23/google-searchs-ai-mode-can-now-tap-into-drive-and-wallet-for-more-personalized-responses": "2026-11-24",
+"https://deepmind.google/blog/finding-faster-quantum-algorithms-with-agents-and-formal-verification": "2026-11-24",
+"https://techcrunch.com/2026/11/23/sierra-doubles-valuation-to-30b-within-six-months-as-demand-for-ai-in-cx-takes-off": "2026-11-24"
 }
